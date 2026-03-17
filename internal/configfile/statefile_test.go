@@ -103,6 +103,46 @@ func TestWriteStateFileAllFeatures(t *testing.T) {
 	}
 }
 
+func TestParseStateContent(t *testing.T) {
+	content := `app_name: test-app
+module_path: github.com/test/test-app
+features:
+  - api
+  - db
+db_type: postgresql
+`
+	cfg, err := ParseStateContent(content)
+	if err != nil {
+		t.Fatalf("ParseStateContent error: %v", err)
+	}
+
+	if cfg.AppName != "test-app" {
+		t.Errorf("AppName: got %q, want %q", cfg.AppName, "test-app")
+	}
+	if cfg.ModulePath != "github.com/test/test-app" {
+		t.Errorf("ModulePath: got %q, want %q", cfg.ModulePath, "github.com/test/test-app")
+	}
+	if !cfg.Features.API {
+		t.Error("API feature should be enabled")
+	}
+	if !cfg.Features.DB {
+		t.Error("DB feature should be enabled")
+	}
+	if cfg.DBType != config.DBPostgreSQL {
+		t.Errorf("DBType: got %q, want %q", cfg.DBType, config.DBPostgreSQL)
+	}
+	if cfg.OutputDir != "." {
+		t.Errorf("OutputDir: got %q, want %q", cfg.OutputDir, ".")
+	}
+}
+
+func TestParseStateContentInvalid(t *testing.T) {
+	_, err := ParseStateContent("{{invalid yaml")
+	if err == nil {
+		t.Fatal("expected error for invalid YAML")
+	}
+}
+
 func contains(s, substr string) bool {
 	return len(s) >= len(substr) && (s == substr || len(s) > 0 && containsSubstr(s, substr))
 }

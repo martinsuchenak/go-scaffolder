@@ -62,3 +62,16 @@ func LoadStateFile(path string) (*config.ProjectConfig, error) {
 
 	return sc.ToProjectConfig()
 }
+
+func ParseStateContent(content string) (*config.ProjectConfig, error) {
+	var sc ScaffoldConfig
+	if err := yaml.Unmarshal([]byte(content), &sc); err != nil {
+		return nil, fmt.Errorf("parsing state content: %w", err)
+	}
+
+	if strings.TrimSpace(sc.OutputDir) == "" {
+		sc.OutputDir = "."
+	}
+
+	return sc.ToProjectConfig()
+}

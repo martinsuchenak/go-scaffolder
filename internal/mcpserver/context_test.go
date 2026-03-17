@@ -21,7 +21,7 @@ func TestGenerateContext_BasicOutput(t *testing.T) {
 		CacheType: config.CacheRedis,
 	}
 
-	ctx := GenerateContext(cfg)
+	ctx := GenerateContext(cfg, "")
 
 	checks := []string{
 		"test-app",
@@ -50,7 +50,7 @@ func TestGenerateContext_DisabledFeatureNotInAdd(t *testing.T) {
 		},
 	}
 
-	ctx := GenerateContext(cfg)
+	ctx := GenerateContext(cfg, "")
 
 	if strings.Contains(ctx, "add_api_endpoint") {
 		t.Error("should not list add_api_endpoint when API is disabled")
@@ -72,7 +72,7 @@ func TestGenerateContext_AllFeaturesEnabled(t *testing.T) {
 		CacheType: config.CacheRedis,
 	}
 
-	ctx := GenerateContext(cfg)
+	ctx := GenerateContext(cfg, "")
 
 	if !strings.Contains(ctx, "All features are already enabled") {
 		t.Error("should indicate all features are enabled")
@@ -82,5 +82,35 @@ func TestGenerateContext_AllFeaturesEnabled(t *testing.T) {
 	}
 	if !strings.Contains(ctx, "Cache Type") {
 		t.Error("should show cache type")
+	}
+}
+
+func TestGenerateContext_WithProjectDir(t *testing.T) {
+	cfg := &config.ProjectConfig{
+		AppName:    "test-app",
+		ModulePath: "github.com/test/test-app",
+		Features: config.FeatureSet{
+			CLI: true,
+		},
+	}
+
+	ctx := GenerateContext(cfg, t.TempDir())
+	if !strings.Contains(ctx, "Project Structure") {
+		t.Error("should include project structure when project_dir is set")
+	}
+}
+
+func TestGenerateContext_NoProjectDir_NoTree(t *testing.T) {
+	cfg := &config.ProjectConfig{
+		AppName:    "test-app",
+		ModulePath: "github.com/test/test-app",
+		Features: config.FeatureSet{
+			CLI: true,
+		},
+	}
+
+	ctx := GenerateContext(cfg, "")
+	if strings.Contains(ctx, "Project Structure") {
+		t.Error("should not include project structure when project_dir is empty")
 	}
 }

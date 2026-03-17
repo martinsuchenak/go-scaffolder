@@ -160,6 +160,15 @@ When `--token` is set (or `MCP_TOKEN` env var), all requests must include an `Au
 
 All tools return unified diff output. The server uses the `github.com/paularlott/mcp` library and serves on the `/mcp` endpoint.
 
+### Project context for remote usage
+
+Tools that operate on existing projects (all except `scaffold`) accept two optional parameters for locating the project:
+
+- **`project_dir`** -- absolute path to the project root (where `.go-scaffolder.yaml` lives). The server reads the state file and resolves file paths from this directory.
+- **`state_file`** -- the content of `.go-scaffolder.yaml` as a string. Use this for fully remote operation where the server has no filesystem access to the project.
+
+If neither is provided, the server looks for `.go-scaffolder.yaml` in its working directory. When `state_file` is used without `project_dir`, patch operations on existing files (marker-based patching for `enable_feature`) output the code snippets to apply manually since the server cannot read the project files.
+
 ## Generated project structure
 
 ```

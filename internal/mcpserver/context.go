@@ -9,7 +9,7 @@ import (
 	"github.com/martinsuchenak/go-scaffolder/internal/config"
 )
 
-func GenerateContext(cfg *config.ProjectConfig) string {
+func GenerateContext(cfg *config.ProjectConfig, projectDir string) string {
 	var sb strings.Builder
 
 	sb.WriteString("# Project Context\n\n")
@@ -80,10 +80,12 @@ func GenerateContext(cfg *config.ProjectConfig) string {
 		sb.WriteString("All features are already enabled.\n")
 	}
 
-	sb.WriteString("\n## Project Structure\n\n")
-	sb.WriteString("```\n")
-	sb.WriteString(walkProjectTree(".", 0, 3))
-	sb.WriteString("```\n")
+	if projectDir != "" {
+		sb.WriteString("\n## Project Structure\n\n")
+		sb.WriteString("```\n")
+		sb.WriteString(walkProjectTree(projectDir, 0, 3))
+		sb.WriteString("```\n")
+	}
 
 	return sb.String()
 }
