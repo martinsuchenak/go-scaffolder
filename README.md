@@ -79,6 +79,38 @@ cache_type: redis
 
 CLI is always included regardless of selection.
 
+## Adding components to an existing project
+
+After scaffolding, you can add new components without re-scaffolding. Run these from the project root (where `.go-scaffolder.yaml` is):
+
+```sh
+# Add a new CLI command
+go-scaffolder add cli-command --name migrate
+
+# Add a new API endpoint (requires API feature)
+go-scaffolder add api-endpoint --name user
+
+# Add a new MCP tool (requires MCP feature)
+go-scaffolder add mcp-tool --name search
+```
+
+Each command generates all necessary files (handler, service, storage, routes, tests) and lists them on output.
+
+## Enabling features on an existing project
+
+Features can be enabled after initial scaffolding:
+
+```sh
+# Interactive — select from features not yet enabled
+go-scaffolder add feature
+
+# Non-interactive
+go-scaffolder add feature --db-type postgresql
+go-scaffolder add feature --cache-type redis
+```
+
+This creates feature-specific files and patches shared files (`cmd/serve.go`, config TOML, `Taskfile.yml`) using marker comments. If a marker was removed, the tool prints the code to add manually. All created and updated files are listed on output.
+
 ## Generated project structure
 
 ```
