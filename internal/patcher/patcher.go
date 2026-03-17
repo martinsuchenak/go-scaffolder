@@ -114,16 +114,15 @@ func ReportResults(results []PatchResult) {
 	}
 
 	for _, r := range succeeded {
-		fmt.Printf("  Patched %s: %s\n", r.File, r.Description)
+		fmt.Printf("  updated: %s (%s)\n", r.File, r.Description)
 	}
 
 	if len(failed) > 0 {
 		fmt.Println("\nThe following patches could not be applied automatically.")
 		fmt.Println("Please add the following code manually:")
 		for _, r := range failed {
-			fmt.Printf("--- %s (%s) ---\n", r.File, r.Description)
+			fmt.Printf("\n--- %s (%s) ---\n", r.File, r.Description)
 			fmt.Println(r.Content)
-			fmt.Println()
 		}
 	}
 }

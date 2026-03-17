@@ -313,7 +313,9 @@ func runEnableFeature(ctx context.Context, cmd *cli.Command) error {
 			if writeErr := writer.WriteAll(".", newFiles); writeErr != nil {
 				return fmt.Errorf("writing files: %w", writeErr)
 			}
-			fmt.Printf("Created %d new files for feature %q\n", len(newFiles), feature)
+			for path := range newFiles {
+				fmt.Printf("  created: %s\n", path)
+			}
 		}
 	}
 
@@ -380,7 +382,10 @@ func runAdd(ctx context.Context, cmd *cli.Command, addType string, requiredFeatu
 		return fmt.Errorf("writing files: %w", err)
 	}
 
-	fmt.Printf("Added %d files for %s %q\n", len(files), addType, name)
+	fmt.Printf("Added %d files for %s %q:\n", len(files), addType, name)
+	for path := range files {
+		fmt.Printf("  created: %s\n", path)
+	}
 
 	fmt.Println("Running go mod tidy...")
 	output, tidyErr := postgen.RunGoModTidy(".")
