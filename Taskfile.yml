@@ -12,7 +12,7 @@ tasks:
     desc: Build the scaffolder binary
     cmds:
       - mkdir -p bin
-      - go build -o bin/{{.BINARY}} .
+      - go build -ldflags "-X main.version=dev" -o bin/{{.BINARY}} .
 
   test:
     desc: Run unit and property tests
@@ -38,6 +38,29 @@ tasks:
     desc: Run go vet
     cmds:
       - go vet ./...
+
+  push-tag:
+    desc: Create and push a version tag (usage task push-tag -- v0.3.0)
+    cmds:
+      - |
+        TAG={{.CLI_ARGS}}
+        if [ -z "$TAG" ]; then
+          echo "Usage: task push-tag -- v0.3.0"
+          exit 1
+        fi
+        if ! echo "$TAG" | grep -qE '^v[0-9]+\.[0-9]+\.[0-9]+'; then
+          echo "Tag must match vX.Y.Z format"
+          exit 1
+        fi
+        echo "Creating tag $TAG..."
+        git tag -a "$TAG" -m "Release $TAG"
+        git push origin "$TAG"
+        echo "Tag $TAG pushed. GitHub Actions will create the release."
+
+  release-local:
+    desc: Test goreleaser locally (snapshot, no publish)
+    cmds:
+      - goreleaser release --snapshot --clean
 
   clean:
     desc: Remove build artifacts

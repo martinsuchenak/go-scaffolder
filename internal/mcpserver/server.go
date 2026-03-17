@@ -32,8 +32,8 @@ func projectParams() []mcp.Parameter {
 	}
 }
 
-func NewServer() *mcp.Server {
-	server := mcp.NewServer("go-scaffolder", "0.2.0")
+func NewServer(version string) *mcp.Server {
+	server := mcp.NewServer("go-scaffolder", version)
 
 	server.RegisterTool(
 		mcp.NewTool("scaffold", "Scaffold a new Go microservice project. Returns unified diff of all files.",

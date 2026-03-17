@@ -24,6 +24,8 @@ import (
 	"github.com/martinsuchenak/go-scaffolder/templates"
 )
 
+var version = "dev"
+
 var configPath string
 var templatesDir string
 var resourceName string
@@ -37,7 +39,7 @@ func main() {
 	app := &cli.Command{
 		Name:    "go-scaffolder",
 		Usage:   "Scaffold a Go microservice",
-		Version: "0.2.0",
+		Version: version,
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:     "config",
@@ -171,7 +173,7 @@ func serveCommand() *cli.Command {
 			},
 		},
 		Run: func(ctx context.Context, cmd *cli.Command) error {
-			server := mcpserver.NewServer()
+			server := mcpserver.NewServer(version)
 			var handler http.HandlerFunc = server.HandleRequest
 			if mcpToken != "" {
 				handler = bearerAuth(mcpToken, handler)
