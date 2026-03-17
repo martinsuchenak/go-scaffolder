@@ -101,6 +101,74 @@ func ApplyPatches(baseDir string, patches []Patch) []PatchResult {
 	return results
 }
 
+type ComputedPatch struct {
+	File       string
+	OldContent string
+	NewContent string
+	Applied    bool
+	Description string
+	Content    string
+}
+
+func ComputePatches(baseDir string, patches []Patch) []ComputedPatch {
+	var results []ComputedPatch
+
+	for _, p := range patches {
+		path := baseDir + "/" + p.File
+		displayContent := p.Content
+		if p.Replace != nil {
+			displayContent = p.Replace.Content
+		}
+		result := ComputedPatch{
+			File:        p.File,
+			Description: p.Description,
+			Content:     displayContent,
+		}
+
+		data, err := os.ReadFile(path)
+		if err != nil {
+			result.Applied = false
+			results = append(results, result)
+			continue
+		}
+
+		content := string(data)
+		result.OldContent = content
+
+		if p.Replace != nil {
+			startIdx := strings.Index(content, p.Replace.StartMarker)
+			endIdx := strings.Index(content, p.Replace.EndMarker)
+			if startIdx == -1 || endIdx == -1 {
+				result.Applied = false
+				results = append(results, result)
+				continue
+			}
+			result.NewContent = content[:startIdx] + p.Replace.Content + content[endIdx+len(p.Replace.EndMarker):]
+			result.Applied = true
+			results = append(results, result)
+			continue
+		}
+
+		idx := strings.Index(content, p.Marker)
+		if idx == -1 {
+			result.Applied = false
+			results = append(results, result)
+			continue
+		}
+
+		if p.InsertAbove {
+			result.NewContent = content[:idx] + p.Content + "\n" + content[idx:]
+		} else {
+			endOfMarker := idx + len(p.Marker)
+			result.NewContent = content[:endOfMarker] + "\n" + p.Content + content[endOfMarker:]
+		}
+		result.Applied = true
+		results = append(results, result)
+	}
+
+	return results
+}
+
 func ReportResults(results []PatchResult) {
 	var failed []PatchResult
 	var succeeded []PatchResult

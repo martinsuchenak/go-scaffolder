@@ -76,11 +76,13 @@ go-scaffolder add feature [flags]      Enable a feature on existing project
 Scaffold flags:
     --config <path>      Path to YAML config file (non-interactive mode)
     --templates <path>   Path to external templates directory
+    --patch              Output unified diff to stdout instead of writing files
     -v, --version        Show version
     -h, --help           Show help
 
 Add flags:
     --name <name>        Name of the new component (prompted if omitted)
+    --patch              Output unified diff to stdout instead of writing files
 
 Feature flags:
     --db-type <type>     Database type: mysql, postgresql, sqlite

@@ -204,3 +204,46 @@ Please add the following code manually:
 The `add` command will **never overwrite existing files**. If a file already exists at the target path, the command exits with an error. This ensures your existing code is never accidentally replaced.
 
 The `add feature` command patches shared files using markers but will not modify files where markers are missing -- it shows you the code to add manually instead.
+
+## Patch Mode
+
+Both scaffolding and all `add` subcommands support `--patch` to output unified diffs to stdout instead of writing files. This is useful for LLM integrations, remote MCP servers, or code review workflows.
+
+```sh
+# Full project scaffold as patch
+go-scaffolder --config scaffold.yaml --patch
+
+# Add components as patch
+go-scaffolder add --patch cli-command --name migrate
+go-scaffolder add --patch api-endpoint --name user
+go-scaffolder add --patch mcp-tool --name search
+go-scaffolder add --patch feature --db-type postgresql
+```
+
+In patch mode:
+
+- **No files are written** to disk
+- **No `go mod tidy`** is run
+- **No state file** is updated
+- New files appear as diffs against `/dev/null`
+- Patched shared files appear as unified diffs (old vs new)
+- Failed patches (missing markers) are reported on stderr
+
+The output is standard unified diff format:
+
+```diff
+--- /dev/null
++++ cmd/migrate.go
+@@ -0,0 +1,25 @@
++package cmd
++...
+
+--- cmd/serve.go
++++ cmd/serve.go
+@@ -5,6 +5,8 @@
+ 	"os"
++	"fmt"
++	"net/http"
+```
+
+This can be consumed by `git apply`, `patch -p0`, or any LLM file editor.

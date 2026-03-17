@@ -162,6 +162,76 @@ func TestApplyPatches_ReplaceBlock(t *testing.T) {
 	}
 }
 
+func TestComputePatches_InsertBelow(t *testing.T) {
+	dir := t.TempDir()
+	file := filepath.Join(dir, "test.go")
+	os.WriteFile(file, []byte("line1\n// marker\nline3\n"), 0644)
+
+	patches := []Patch{
+		{File: "test.go", Marker: "// marker", Content: "inserted", Description: "test"},
+	}
+
+	results := ComputePatches(dir, patches)
+	if !results[0].Applied {
+		t.Fatal("expected patch to be computable")
+	}
+	if results[0].OldContent != "line1\n// marker\nline3\n" {
+		t.Fatalf("unexpected old content: %q", results[0].OldContent)
+	}
+	if !contains(results[0].NewContent, "inserted") {
+		t.Fatal("expected new content to contain inserted text")
+	}
+
+	data, _ := os.ReadFile(file)
+	if contains(string(data), "inserted") {
+		t.Fatal("ComputePatches should NOT write to disk")
+	}
+}
+
+func TestComputePatches_ReplaceBlock(t *testing.T) {
+	dir := t.TempDir()
+	file := filepath.Join(dir, "test.go")
+	os.WriteFile(file, []byte("before\n// start\nold\n// end\nafter\n"), 0644)
+
+	patches := []Patch{
+		{
+			File:        "test.go",
+			Description: "replace",
+			Replace: &ReplaceBlock{
+				StartMarker: "// start",
+				EndMarker:   "// end",
+				Content:     "// start\nnew\n// end",
+			},
+		},
+	}
+
+	results := ComputePatches(dir, patches)
+	if !results[0].Applied {
+		t.Fatal("expected replace patch to be computable")
+	}
+	if contains(results[0].NewContent, "old") {
+		t.Fatal("expected old content to be replaced")
+	}
+	if !contains(results[0].NewContent, "new") {
+		t.Fatal("expected new content in result")
+	}
+}
+
+func TestComputePatches_MissingMarker(t *testing.T) {
+	dir := t.TempDir()
+	file := filepath.Join(dir, "test.go")
+	os.WriteFile(file, []byte("no marker\n"), 0644)
+
+	patches := []Patch{
+		{File: "test.go", Marker: "// missing", Content: "x", Description: "test"},
+	}
+
+	results := ComputePatches(dir, patches)
+	if results[0].Applied {
+		t.Fatal("expected patch to NOT be computable when marker missing")
+	}
+}
+
 func TestApplyPatches_ReplaceBlockMissingMarker(t *testing.T) {
 	dir := t.TempDir()
 	file := filepath.Join(dir, "test.go")

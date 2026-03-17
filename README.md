@@ -111,6 +111,22 @@ go-scaffolder add feature --cache-type redis
 
 This creates feature-specific files and patches shared files (`cmd/serve.go`, config TOML, `Taskfile.yml`) using marker comments. If a marker was removed, the tool prints the code to add manually. All created and updated files are listed on output.
 
+## Patch mode (for LLM / MCP integration)
+
+Both scaffolding and all `add` subcommands support `--patch` to output unified diffs to stdout instead of writing files:
+
+```sh
+# Full project as patch
+go-scaffolder --config scaffold.yaml --patch
+
+# Add components as patch
+go-scaffolder add --patch cli-command --name migrate
+go-scaffolder add --patch api-endpoint --name user
+go-scaffolder add --patch feature --db-type postgresql
+```
+
+No files are written, no `go mod tidy` is run. The output is standard unified diff format consumable by `git apply`, `patch`, or any LLM file editor.
+
 ## Generated project structure
 
 ```

@@ -10,6 +10,7 @@ import (
 
 	"github.com/martinsuchenak/go-scaffolder/internal/config"
 	"github.com/martinsuchenak/go-scaffolder/internal/configfile"
+	"github.com/martinsuchenak/go-scaffolder/internal/diff"
 	"github.com/martinsuchenak/go-scaffolder/internal/engine"
 	"github.com/martinsuchenak/go-scaffolder/internal/patcher"
 	"github.com/martinsuchenak/go-scaffolder/internal/postgen"
@@ -23,6 +24,7 @@ var templatesDir string
 var resourceName string
 var dbTypeFlag string
 var cacheTypeFlag string
+var patchMode bool
 
 func main() {
 	app := &cli.Command{
@@ -39,6 +41,11 @@ func main() {
 				Name:     "templates",
 				Usage:    "Path to external templates directory (must contain manifest.yaml)",
 				AssignTo: &templatesDir,
+			},
+			&cli.BoolFlag{
+				Name:     "patch",
+				Usage:    "Output unified diff to stdout instead of writing files",
+				AssignTo: &patchMode,
 			},
 		},
 		Commands: []*cli.Command{addCommand(), cli.GenerateCompletionCommand()},
@@ -84,6 +91,13 @@ func runScaffold(ctx context.Context, cmd *cli.Command) error {
 	files, err := eng.RenderAll(cfg)
 	if err != nil {
 		return fmt.Errorf("template rendering error: %w", err)
+	}
+
+	if patchMode {
+		for path, content := range files {
+			fmt.Print(diff.NewFileDiff(path, string(content)))
+		}
+		return nil
 	}
 
 	outputDir, err := filepath.Abs(cfg.OutputDir)
@@ -135,6 +149,14 @@ func addCommand() *cli.Command {
 	return &cli.Command{
 		Name:  "add",
 		Usage: "Add a component or enable a feature in an existing scaffolded project",
+		Flags: []cli.Flag{
+			&cli.BoolFlag{
+				Name:     "patch",
+				Usage:    "Output unified diff to stdout instead of writing files",
+				AssignTo: &patchMode,
+				Global:   true,
+			},
+		},
 		Commands: []*cli.Command{
 			{
 				Name:  "cli-command",
@@ -296,6 +318,34 @@ func runEnableFeature(ctx context.Context, cmd *cli.Command) error {
 		}
 	}
 
+	if patchMode {
+		if len(allEntries) > 0 {
+			files, renderErr := eng.RenderFeatureFiles(cfg, allEntries)
+			if renderErr != nil {
+				return fmt.Errorf("template rendering error: %w", renderErr)
+			}
+			for path, content := range files {
+				if _, statErr := os.Stat(path); os.IsNotExist(statErr) {
+					fmt.Print(diff.NewFileDiff(path, string(content)))
+				}
+			}
+		}
+
+		patches := patcher.FeaturePatches(feature, cfg)
+		if len(patches) > 0 {
+			computed := patcher.ComputePatches(".", patches)
+			for _, cp := range computed {
+				if cp.Applied {
+					fmt.Print(diff.UnifiedDiff(cp.File, cp.File, cp.OldContent, cp.NewContent))
+				} else {
+					fmt.Fprintf(os.Stderr, "# Could not compute patch for %s (%s)\n", cp.File, cp.Description)
+					fmt.Fprintf(os.Stderr, "# Add manually:\n%s\n", cp.Content)
+				}
+			}
+		}
+		return nil
+	}
+
 	if len(allEntries) > 0 {
 		files, renderErr := eng.RenderFeatureFiles(cfg, allEntries)
 		if renderErr != nil {
@@ -370,6 +420,13 @@ func runAdd(ctx context.Context, cmd *cli.Command, addType string, requiredFeatu
 	files, err := eng.RenderAdd(cfg, addType)
 	if err != nil {
 		return fmt.Errorf("template rendering error: %w", err)
+	}
+
+	if patchMode {
+		for path, content := range files {
+			fmt.Print(diff.NewFileDiff(path, string(content)))
+		}
+		return nil
 	}
 
 	for relPath := range files {
