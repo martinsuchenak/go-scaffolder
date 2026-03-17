@@ -2,9 +2,13 @@ package main
 
 import (
 	"context"
+	"crypto/subtle"
 	"fmt"
+	"log"
+	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/paularlott/cli"
 
@@ -12,6 +16,7 @@ import (
 	"github.com/martinsuchenak/go-scaffolder/internal/configfile"
 	"github.com/martinsuchenak/go-scaffolder/internal/diff"
 	"github.com/martinsuchenak/go-scaffolder/internal/engine"
+	"github.com/martinsuchenak/go-scaffolder/internal/mcpserver"
 	"github.com/martinsuchenak/go-scaffolder/internal/patcher"
 	"github.com/martinsuchenak/go-scaffolder/internal/postgen"
 	"github.com/martinsuchenak/go-scaffolder/internal/prompt"
@@ -25,6 +30,8 @@ var resourceName string
 var dbTypeFlag string
 var cacheTypeFlag string
 var patchMode bool
+var mcpListenAddr string
+var mcpToken string
 
 func main() {
 	app := &cli.Command{
@@ -48,7 +55,7 @@ func main() {
 				AssignTo: &patchMode,
 			},
 		},
-		Commands: []*cli.Command{addCommand(), cli.GenerateCompletionCommand()},
+		Commands: []*cli.Command{addCommand(), serveCommand(), cli.GenerateCompletionCommand()},
 		Run:      runScaffold,
 	}
 
@@ -143,6 +150,55 @@ func runScaffold(ctx context.Context, cmd *cli.Command) error {
 
 	fmt.Printf("\nProject %s scaffolded successfully!\n", cfg.AppName)
 	return nil
+}
+
+func serveCommand() *cli.Command {
+	return &cli.Command{
+		Name:  "serve",
+		Usage: "Start MCP server exposing scaffolder tools via HTTP",
+		Flags: []cli.Flag{
+			&cli.StringFlag{
+				Name:         "listen",
+				Usage:        "Address to listen on",
+				DefaultValue: ":8080",
+				AssignTo:     &mcpListenAddr,
+			},
+			&cli.StringFlag{
+				Name:     "token",
+				Usage:    "Bearer token for authorization (optional, no auth if omitted)",
+				AssignTo: &mcpToken,
+				EnvVars:  []string{"MCP_TOKEN"},
+			},
+		},
+		Run: func(ctx context.Context, cmd *cli.Command) error {
+			server := mcpserver.NewServer()
+			var handler http.HandlerFunc = server.HandleRequest
+			if mcpToken != "" {
+				handler = bearerAuth(mcpToken, handler)
+				log.Printf("MCP server listening on %s (auth enabled)", mcpListenAddr)
+			} else {
+				log.Printf("MCP server listening on %s (no auth)", mcpListenAddr)
+			}
+			http.HandleFunc("/mcp", handler)
+			return http.ListenAndServe(mcpListenAddr, nil)
+		},
+	}
+}
+
+func bearerAuth(token string, next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		auth := r.Header.Get("Authorization")
+		if !strings.HasPrefix(auth, "Bearer ") {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+		provided := strings.TrimPrefix(auth, "Bearer ")
+		if subtle.ConstantTimeCompare([]byte(provided), []byte(token)) != 1 {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+		next(w, r)
+	}
 }
 
 func addCommand() *cli.Command {

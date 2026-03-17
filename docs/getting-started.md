@@ -72,6 +72,7 @@ go-scaffolder add cli-command [flags]  Add a CLI command to existing project
 go-scaffolder add api-endpoint [flags] Add an API endpoint to existing project
 go-scaffolder add mcp-tool [flags]     Add an MCP tool to existing project
 go-scaffolder add feature [flags]      Enable a feature on existing project
+go-scaffolder serve [flags]            Start MCP server
 
 Scaffold flags:
     --config <path>      Path to YAML config file (non-interactive mode)
@@ -87,6 +88,10 @@ Add flags:
 Feature flags:
     --db-type <type>     Database type: mysql, postgresql, sqlite
     --cache-type <type>  Cache type: redis, valkey
+
+Serve flags:
+    --listen <addr>      Listen address (default: :8080)
+    --token <token>      Bearer token for authorization (optional, env: MCP_TOKEN)
 ```
 
 ## What Happens During Scaffolding

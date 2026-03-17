@@ -127,6 +127,39 @@ go-scaffolder add --patch feature --db-type postgresql
 
 No files are written, no `go mod tidy` is run. The output is standard unified diff format consumable by `git apply`, `patch`, or any LLM file editor.
 
+## MCP server mode
+
+The scaffolder can run as a remote MCP server, exposing all operations as tools for LLM consumption:
+
+```sh
+# Start MCP server on default port
+go-scaffolder serve
+
+# Custom listen address
+go-scaffolder serve --listen :9090
+
+# With bearer token authorization
+go-scaffolder serve --token my-secret-token
+
+# Or via environment variable
+MCP_TOKEN=my-secret-token go-scaffolder serve
+```
+
+When `--token` is set (or `MCP_TOKEN` env var), all requests must include an `Authorization: Bearer <token>` header. Without it, no auth is required.
+
+### Available MCP tools
+
+| Tool | Description |
+|------|-------------|
+| `scaffold` | Scaffold a new project (returns unified diff) |
+| `add_cli_command` | Add a CLI command to an existing project |
+| `add_api_endpoint` | Add an API endpoint resource |
+| `add_mcp_tool` | Add an MCP tool |
+| `enable_feature` | Enable a feature (api, mcp, ui, db, cache, docker, nomad) |
+| `project_context` | Generate project context summary for LLM consumption |
+
+All tools return unified diff output. The server uses the `github.com/paularlott/mcp` library and serves on the `/mcp` endpoint.
+
 ## Generated project structure
 
 ```
