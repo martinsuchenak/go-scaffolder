@@ -7,13 +7,16 @@ The scaffolder supports the following optional features. CLI is always included.
 Every generated project includes:
 
 - `main.go` with `paularlott/cli` command framework
-- `cmd/serve.go` -- the main `serve` sub-command
-- `cmd/init.go` -- generates a default config file
-- `cmd/completion.go` -- shell completion scripts (bash, zsh, fish)
+- `cmd/register.go` -- command registry with self-registration support
+- `cmd/serve.go` -- the main `serve` sub-command (self-registers via `init()`)
+- `cmd/init.go` -- generates a default config file (self-registers via `init()`)
+- `cmd/completion.go` -- shell completion scripts (self-registers via `init()`)
 - Configuration loading from TOML files, `.env` files, and environment variables
 - `build/version.go` with `Version` and `Date` injected via `-ldflags`
 - `Taskfile.yml` with build, test, and lint tasks (AMD64 + ARM64, CGO_ENABLED=0)
 - `<app-name>-config.toml` with a `[log]` section
+
+New CLI commands can be added post-scaffold with `go-scaffolder add cli-command`.
 
 ## API
 
@@ -21,7 +24,8 @@ HTTP REST API using Go's standard `net/http` with Go 1.22+ enhanced routing.
 
 Generated files:
 
-- `cmd/routes/api_routes.go` -- route registration with `GET /health` and `GET /metrics`
+- `cmd/routes/api_routes.go` -- route registry with `GET /health`, `GET /metrics`, and self-registration support
+- `cmd/routes/sample_routes.go` -- sample resource routes (self-registers via `init()`)
 - `internal/rest/helpers.go` -- JSON response helpers
 - `internal/auth/auth.go` -- API key and Bearer token middleware placeholders
 - `internal/ctxkeys/ctxkeys.go` -- typed context keys
@@ -30,15 +34,20 @@ Generated files:
 
 Config additions: `[server]` section with `host` and `port`.
 
+New API endpoints can be added post-scaffold with `go-scaffolder add api-endpoint`.
+
 ## MCP
 
 Model Context Protocol server using `paularlott/mcp`.
 
 Generated files:
 
-- `cmd/mcp/mcp.go` -- MCP server with a sample tool, wired into the serve command
+- `cmd/mcp/mcp.go` -- MCP server with tool registry and self-registration support
+- `cmd/mcp/sample_tool.go` -- sample tool (self-registers via `init()`)
 
 The MCP server starts on a separate port and exposes tools via HTTP.
+
+New MCP tools can be added post-scaffold with `go-scaffolder add mcp-tool`.
 
 ## UI
 

@@ -111,6 +111,18 @@ func ValidateOutputDir(s string) error {
 	return nil
 }
 
+func ValidateResourceName(s string) error {
+	if strings.TrimSpace(s) == "" {
+		return fmt.Errorf("resource name must not be empty")
+	}
+	for _, r := range s {
+		if !((r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') || r == '-' || r == '_') {
+			return fmt.Errorf("resource name must contain only alphanumeric characters, hyphens, and underscores")
+		}
+	}
+	return nil
+}
+
 var FeatureOptions = []string{"API", "MCP", "UI", "DB", "Cache", "Docker", "Nomad"}
 var DBTypeOptions = []string{"mysql", "postgresql", "sqlite"}
 var CacheTypeOptions = []string{"redis", "valkey"}

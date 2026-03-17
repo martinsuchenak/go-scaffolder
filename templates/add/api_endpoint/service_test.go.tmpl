@@ -1,0 +1,28 @@
+package {{toSnake .ResourceName}}
+
+import (
+	"context"
+	"testing"
+)
+
+func TestServiceCreate(t *testing.T) {
+	svc := NewService(NewStorage())
+	item, err := svc.Create(context.Background(), Create{{toPascal .ResourceName}}Input{Name: "test"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if item.Name != "test" {
+		t.Errorf("expected name 'test', got %q", item.Name)
+	}
+}
+
+func TestServiceList(t *testing.T) {
+	svc := NewService(NewStorage())
+	items, err := svc.List(context.Background())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(items) != 0 {
+		t.Errorf("expected empty list, got %d items", len(items))
+	}
+}

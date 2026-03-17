@@ -1,0 +1,44 @@
+package {{toSnake .ResourceName}}
+
+import "context"
+
+type {{toPascal .ResourceName}} struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
+type Create{{toPascal .ResourceName}}Input struct {
+	Name string `json:"name"`
+}
+
+type Service struct {
+	storage *Storage
+}
+
+func NewService(s *Storage) *Service {
+	return &Service{storage: s}
+}
+
+func (s *Service) List(ctx context.Context) ([]{{toPascal .ResourceName}}, error) {
+	return s.storage.List(ctx)
+}
+
+func (s *Service) Get(ctx context.Context, id string) (*{{toPascal .ResourceName}}, error) {
+	return s.storage.Get(ctx, id)
+}
+
+func (s *Service) Create(ctx context.Context, input Create{{toPascal .ResourceName}}Input) (*{{toPascal .ResourceName}}, error) {
+	item := {{toPascal .ResourceName}}{
+		ID:   generateID(),
+		Name: input.Name,
+	}
+	if err := s.storage.Create(ctx, &item); err != nil {
+		return nil, err
+	}
+	return &item, nil
+}
+
+func generateID() string {
+	// TODO: Use UUIDv7 generation
+	return "{{toKebab .ResourceName}}-id"
+}

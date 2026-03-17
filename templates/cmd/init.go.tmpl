@@ -9,6 +9,10 @@ import (
 	logslog "github.com/paularlott/logger/slog"
 )
 
+func init() {
+	Register(initCmd())
+}
+
 func initCmd() *cli.Command {
 	return &cli.Command{
 		Name:  "init",

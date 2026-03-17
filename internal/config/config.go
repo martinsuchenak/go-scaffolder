@@ -32,17 +32,40 @@ type FeatureSet struct {
 }
 
 type ProjectConfig struct {
-	AppName    string
-	OutputDir  string
-	ModulePath string
-	Features   FeatureSet
-	DBType     DBType
-	CacheType  CacheType
-	CustomTags []string
+	AppName      string
+	OutputDir    string
+	ModulePath   string
+	Features     FeatureSet
+	DBType       DBType
+	CacheType    CacheType
+	CustomTags   []string
+	ResourceName string
 }
 
 func (fs *FeatureSet) NeedsSRVResolve() bool {
 	return fs.DB || fs.Cache || fs.API
+}
+
+func (fs *FeatureSet) HasFeature(name string) bool {
+	switch name {
+	case "cli":
+		return fs.CLI
+	case "api":
+		return fs.API
+	case "mcp":
+		return fs.MCP
+	case "ui":
+		return fs.UI
+	case "db":
+		return fs.DB
+	case "cache":
+		return fs.Cache
+	case "docker":
+		return fs.Docker
+	case "nomad":
+		return fs.Nomad
+	}
+	return false
 }
 
 func ResolveFeatures(fs *FeatureSet) {

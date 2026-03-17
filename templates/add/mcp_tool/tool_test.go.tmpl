@@ -1,0 +1,9 @@
+package mcp
+
+import "testing"
+
+func Test{{toPascal .ResourceName}}ToolRegistered(t *testing.T) {
+	if len(toolRegistrations) == 0 {
+		t.Fatal("{{toKebab .ResourceName}} tool should be registered via init()")
+	}
+}

@@ -11,6 +11,7 @@ import (
 	"github.com/martinsuchenak/go-scaffolder/internal/config"
 	"github.com/martinsuchenak/go-scaffolder/internal/configfile"
 	"github.com/martinsuchenak/go-scaffolder/internal/engine"
+	"github.com/martinsuchenak/go-scaffolder/internal/patcher"
 	"github.com/martinsuchenak/go-scaffolder/internal/postgen"
 	"github.com/martinsuchenak/go-scaffolder/internal/prompt"
 	"github.com/martinsuchenak/go-scaffolder/internal/writer"
@@ -19,12 +20,15 @@ import (
 
 var configPath string
 var templatesDir string
+var resourceName string
+var dbTypeFlag string
+var cacheTypeFlag string
 
 func main() {
 	app := &cli.Command{
 		Name:    "go-scaffolder",
 		Usage:   "Scaffold a Go microservice",
-		Version: "0.1.0",
+		Version: "0.2.0",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:     "config",
@@ -37,7 +41,8 @@ func main() {
 				AssignTo: &templatesDir,
 			},
 		},
-		Run: runScaffold,
+		Commands: []*cli.Command{addCommand(), cli.GenerateCompletionCommand()},
+		Run:      runScaffold,
 	}
 
 	if err := app.Execute(context.Background()); err != nil {
@@ -106,6 +111,11 @@ func runScaffold(ctx context.Context, cmd *cli.Command) error {
 		return fmt.Errorf("writing files: %w", err)
 	}
 
+	stateFilePath := filepath.Join(outputDir, configfile.StateFileName)
+	if err := configfile.WriteStateFile(stateFilePath, cfg); err != nil {
+		return fmt.Errorf("writing state file: %w", err)
+	}
+
 	fmt.Printf("Generated %d files in %s\n", len(files), outputDir)
 
 	fmt.Println("Running go mod tidy...")
@@ -118,6 +128,268 @@ func runScaffold(ctx context.Context, cmd *cli.Command) error {
 	}
 
 	fmt.Printf("\nProject %s scaffolded successfully!\n", cfg.AppName)
+	return nil
+}
+
+func addCommand() *cli.Command {
+	return &cli.Command{
+		Name:  "add",
+		Usage: "Add a component or enable a feature in an existing scaffolded project",
+		Commands: []*cli.Command{
+			{
+				Name:  "cli-command",
+				Usage: "Add a new CLI command",
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:     "name",
+						Usage:    "Name of the new command",
+						AssignTo: &resourceName,
+					},
+				},
+				Run: func(ctx context.Context, cmd *cli.Command) error {
+					return runAdd(ctx, cmd, "cli-command", "")
+				},
+			},
+			{
+				Name:  "api-endpoint",
+				Usage: "Add a new API endpoint resource",
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:     "name",
+						Usage:    "Name of the new endpoint resource",
+						AssignTo: &resourceName,
+					},
+				},
+				Run: func(ctx context.Context, cmd *cli.Command) error {
+					return runAdd(ctx, cmd, "api-endpoint", "api")
+				},
+			},
+			{
+				Name:  "mcp-tool",
+				Usage: "Add a new MCP tool",
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:     "name",
+						Usage:    "Name of the new MCP tool",
+						AssignTo: &resourceName,
+					},
+				},
+				Run: func(ctx context.Context, cmd *cli.Command) error {
+					return runAdd(ctx, cmd, "mcp-tool", "mcp")
+				},
+			},
+			enableFeatureCommand(),
+		},
+	}
+}
+
+func enableFeatureCommand() *cli.Command {
+	return &cli.Command{
+		Name:  "feature",
+		Usage: "Enable a feature (api, mcp, ui, db, cache, docker, nomad)",
+		Flags: []cli.Flag{
+			&cli.StringFlag{
+				Name:     "db-type",
+				Usage:    "Database type (mysql, postgresql, sqlite) -- required when enabling db",
+				AssignTo: &dbTypeFlag,
+			},
+			&cli.StringFlag{
+				Name:     "cache-type",
+				Usage:    "Cache type (redis, valkey) -- required when enabling cache",
+				AssignTo: &cacheTypeFlag,
+			},
+		},
+		Run: runEnableFeature,
+	}
+}
+
+var enableableFeatures = []string{"api", "mcp", "ui", "db", "cache", "docker", "nomad"}
+
+func runEnableFeature(ctx context.Context, cmd *cli.Command) error {
+	cfg, err := configfile.LoadStateFile(configfile.StateFileName)
+	if err != nil {
+		return fmt.Errorf("not a go-scaffolder project (missing %s): %w", configfile.StateFileName, err)
+	}
+
+	p := prompt.NewTerminalPrompter()
+
+	var available []string
+	for _, f := range enableableFeatures {
+		if !cfg.Features.HasFeature(f) {
+			available = append(available, f)
+		}
+	}
+	if len(available) == 0 {
+		fmt.Println("All features are already enabled.")
+		return nil
+	}
+
+	feature, err := p.AskSelect("Select feature to enable", available)
+	if err != nil {
+		return err
+	}
+
+	if feature == "db" {
+		if dbTypeFlag != "" {
+			cfg.DBType = config.DBType(dbTypeFlag)
+		} else {
+			dbStr, askErr := p.AskSelect("Select database type", prompt.DBTypeOptions)
+			if askErr != nil {
+				return askErr
+			}
+			cfg.DBType = config.DBType(dbStr)
+		}
+	}
+
+	if feature == "cache" {
+		if cacheTypeFlag != "" {
+			cfg.CacheType = config.CacheType(cacheTypeFlag)
+		} else {
+			cacheStr, askErr := p.AskSelect("Select cache type", prompt.CacheTypeOptions)
+			if askErr != nil {
+				return askErr
+			}
+			cfg.CacheType = config.CacheType(cacheStr)
+		}
+	}
+
+	if feature == "nomad" {
+		cfg.Features.Nomad = true
+		cfg.Features.Docker = true
+	}
+
+	switch feature {
+	case "api":
+		cfg.Features.API = true
+	case "mcp":
+		cfg.Features.MCP = true
+	case "ui":
+		cfg.Features.UI = true
+	case "db":
+		cfg.Features.DB = true
+	case "cache":
+		cfg.Features.Cache = true
+	case "docker":
+		cfg.Features.Docker = true
+	case "nomad":
+		cfg.Features.Nomad = true
+	}
+
+	eng := engine.New(templates.FS)
+
+	var allEntries []engine.TemplateEntry
+
+	entries := eng.EnableFeatureManifest(feature)
+	if entries != nil {
+		allEntries = append(allEntries, entries...)
+	}
+
+	if feature == "cache" {
+		cacheEntries := eng.EnableFeatureCacheManifest(cfg.CacheType)
+		allEntries = append(allEntries, cacheEntries...)
+	}
+
+	needsSRV := cfg.Features.NeedsSRVResolve()
+	if needsSRV {
+		if _, statErr := os.Stat("internal/resolve/resolve.go"); os.IsNotExist(statErr) {
+			allEntries = append(allEntries, eng.EnableFeatureSRVManifest()...)
+		}
+	}
+
+	if len(allEntries) > 0 {
+		files, renderErr := eng.RenderFeatureFiles(cfg, allEntries)
+		if renderErr != nil {
+			return fmt.Errorf("template rendering error: %w", renderErr)
+		}
+
+		newFiles := make(map[string][]byte)
+		for path, content := range files {
+			if _, statErr := os.Stat(path); os.IsNotExist(statErr) {
+				newFiles[path] = content
+			}
+		}
+
+		if len(newFiles) > 0 {
+			if writeErr := writer.WriteAll(".", newFiles); writeErr != nil {
+				return fmt.Errorf("writing files: %w", writeErr)
+			}
+			fmt.Printf("Created %d new files for feature %q\n", len(newFiles), feature)
+		}
+	}
+
+	patches := patcher.FeaturePatches(feature, cfg)
+	if len(patches) > 0 {
+		results := patcher.ApplyPatches(".", patches)
+		patcher.ReportResults(results)
+	}
+
+	if err := configfile.WriteStateFile(configfile.StateFileName, cfg); err != nil {
+		return fmt.Errorf("updating state file: %w", err)
+	}
+
+	fmt.Println("Running go mod tidy...")
+	output, tidyErr := postgen.RunGoModTidy(".")
+	if tidyErr != nil {
+		fmt.Fprintf(os.Stderr, "Warning: go mod tidy failed: %v\n%s\n", tidyErr, output)
+	} else {
+		fmt.Println("Dependencies resolved successfully.")
+	}
+
+	fmt.Printf("\nFeature %q enabled successfully!\n", feature)
+	return nil
+}
+
+func runAdd(ctx context.Context, cmd *cli.Command, addType string, requiredFeature string) error {
+	cfg, err := configfile.LoadStateFile(configfile.StateFileName)
+	if err != nil {
+		return fmt.Errorf("not a go-scaffolder project (missing %s): %w", configfile.StateFileName, err)
+	}
+
+	if requiredFeature != "" && !cfg.Features.HasFeature(requiredFeature) {
+		return fmt.Errorf("this project was not scaffolded with the %q feature; enable it first with: go-scaffolder add feature", requiredFeature)
+	}
+
+	name := resourceName
+	if name == "" {
+		p := prompt.NewTerminalPrompter()
+		name, err = p.AskString("Resource name", prompt.ValidateResourceName)
+		if err != nil {
+			return err
+		}
+	}
+
+	if err := prompt.ValidateResourceName(name); err != nil {
+		return err
+	}
+
+	cfg.ResourceName = name
+
+	eng := engine.New(templates.FS)
+	files, err := eng.RenderAdd(cfg, addType)
+	if err != nil {
+		return fmt.Errorf("template rendering error: %w", err)
+	}
+
+	for relPath := range files {
+		if _, statErr := os.Stat(relPath); statErr == nil {
+			return fmt.Errorf("file already exists: %s (will not overwrite)", relPath)
+		}
+	}
+
+	if err := writer.WriteAll(".", files); err != nil {
+		return fmt.Errorf("writing files: %w", err)
+	}
+
+	fmt.Printf("Added %d files for %s %q\n", len(files), addType, name)
+
+	fmt.Println("Running go mod tidy...")
+	output, tidyErr := postgen.RunGoModTidy(".")
+	if tidyErr != nil {
+		fmt.Fprintf(os.Stderr, "Warning: go mod tidy failed: %v\n%s\n", tidyErr, output)
+	} else {
+		fmt.Println("Dependencies resolved successfully.")
+	}
+
 	return nil
 }
 

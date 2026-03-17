@@ -9,7 +9,9 @@ import (
 	"testing"
 
 	"github.com/martinsuchenak/go-scaffolder/internal/config"
+	"github.com/martinsuchenak/go-scaffolder/internal/configfile"
 	"github.com/martinsuchenak/go-scaffolder/internal/engine"
+	"github.com/martinsuchenak/go-scaffolder/internal/patcher"
 	"github.com/martinsuchenak/go-scaffolder/internal/writer"
 	"github.com/martinsuchenak/go-scaffolder/templates"
 )
@@ -190,6 +192,274 @@ func TestIntegration_MySQLRedis(t *testing.T) {
 	}
 
 	dir := scaffoldProject(t, cfg)
+	runInDir(t, dir, "go", "mod", "tidy")
+	runInDir(t, dir, "go", "build", "./...")
+	runInDir(t, dir, "go", "vet", "./...")
+	runInDir(t, dir, "go", "test", "./...")
+}
+
+func TestIntegration_AddCLICommand(t *testing.T) {
+	cfg := &config.ProjectConfig{
+		AppName:    "test-add-cli",
+		OutputDir:  "/tmp/test-add-cli",
+		ModulePath: "test-add-cli",
+		Features:   config.FeatureSet{},
+	}
+
+	dir := scaffoldProject(t, cfg)
+
+	if err := configfile.WriteStateFile(filepath.Join(dir, configfile.StateFileName), cfg); err != nil {
+		t.Fatalf("WriteStateFile error: %v", err)
+	}
+
+	cfg.ResourceName = "migrate"
+	eng := engine.New(templates.FS)
+	files, err := eng.RenderAdd(cfg, "cli-command")
+	if err != nil {
+		t.Fatalf("RenderAdd error: %v", err)
+	}
+	if err := writer.WriteAll(dir, files); err != nil {
+		t.Fatalf("WriteAll error: %v", err)
+	}
+
+	runInDir(t, dir, "go", "mod", "tidy")
+	runInDir(t, dir, "go", "build", "./...")
+	runInDir(t, dir, "go", "vet", "./...")
+	runInDir(t, dir, "go", "test", "./...")
+}
+
+func TestIntegration_AddAPIEndpoint(t *testing.T) {
+	cfg := &config.ProjectConfig{
+		AppName:    "test-add-api",
+		OutputDir:  "/tmp/test-add-api",
+		ModulePath: "test-add-api",
+		Features: config.FeatureSet{
+			API: true,
+		},
+	}
+
+	dir := scaffoldProject(t, cfg)
+
+	if err := configfile.WriteStateFile(filepath.Join(dir, configfile.StateFileName), cfg); err != nil {
+		t.Fatalf("WriteStateFile error: %v", err)
+	}
+
+	cfg.ResourceName = "user"
+	eng := engine.New(templates.FS)
+	files, err := eng.RenderAdd(cfg, "api-endpoint")
+	if err != nil {
+		t.Fatalf("RenderAdd error: %v", err)
+	}
+	if err := writer.WriteAll(dir, files); err != nil {
+		t.Fatalf("WriteAll error: %v", err)
+	}
+
+	runInDir(t, dir, "go", "mod", "tidy")
+	runInDir(t, dir, "go", "build", "./...")
+	runInDir(t, dir, "go", "vet", "./...")
+	runInDir(t, dir, "go", "test", "./...")
+}
+
+func TestIntegration_AddMCPTool(t *testing.T) {
+	cfg := &config.ProjectConfig{
+		AppName:    "test-add-mcp",
+		OutputDir:  "/tmp/test-add-mcp",
+		ModulePath: "test-add-mcp",
+		Features: config.FeatureSet{
+			MCP: true,
+		},
+	}
+
+	dir := scaffoldProject(t, cfg)
+
+	if err := configfile.WriteStateFile(filepath.Join(dir, configfile.StateFileName), cfg); err != nil {
+		t.Fatalf("WriteStateFile error: %v", err)
+	}
+
+	cfg.ResourceName = "search"
+	eng := engine.New(templates.FS)
+	files, err := eng.RenderAdd(cfg, "mcp-tool")
+	if err != nil {
+		t.Fatalf("RenderAdd error: %v", err)
+	}
+	if err := writer.WriteAll(dir, files); err != nil {
+		t.Fatalf("WriteAll error: %v", err)
+	}
+
+	runInDir(t, dir, "go", "mod", "tidy")
+	runInDir(t, dir, "go", "build", "./...")
+	runInDir(t, dir, "go", "vet", "./...")
+	runInDir(t, dir, "go", "test", "./...")
+}
+
+func enableFeature(t *testing.T, dir string, feature string, cfg *config.ProjectConfig) {
+	t.Helper()
+	eng := engine.New(templates.FS)
+
+	var allEntries []engine.TemplateEntry
+
+	entries := eng.EnableFeatureManifest(feature)
+	if entries != nil {
+		allEntries = append(allEntries, entries...)
+	}
+
+	if feature == "cache" {
+		allEntries = append(allEntries, eng.EnableFeatureCacheManifest(cfg.CacheType)...)
+	}
+
+	if cfg.Features.NeedsSRVResolve() {
+		srvPath := filepath.Join(dir, "internal/resolve/resolve.go")
+		if _, err := os.Stat(srvPath); os.IsNotExist(err) {
+			allEntries = append(allEntries, eng.EnableFeatureSRVManifest()...)
+		}
+	}
+
+	if len(allEntries) > 0 {
+		files, err := eng.RenderFeatureFiles(cfg, allEntries)
+		if err != nil {
+			t.Fatalf("RenderFeatureFiles error: %v", err)
+		}
+		newFiles := make(map[string][]byte)
+		for path, content := range files {
+			fullPath := filepath.Join(dir, path)
+			if _, statErr := os.Stat(fullPath); os.IsNotExist(statErr) {
+				newFiles[path] = content
+			}
+		}
+		if err := writer.WriteAll(dir, newFiles); err != nil {
+			t.Fatalf("WriteAll error: %v", err)
+		}
+	}
+
+	patches := patcher.FeaturePatches(feature, cfg)
+	if len(patches) > 0 {
+		results := patcher.ApplyPatches(dir, patches)
+		for _, r := range results {
+			if !r.Applied {
+				t.Fatalf("patch failed for %s: %s", r.File, r.Description)
+			}
+		}
+	}
+
+	stateFilePath := filepath.Join(dir, configfile.StateFileName)
+	if err := configfile.WriteStateFile(stateFilePath, cfg); err != nil {
+		t.Fatalf("WriteStateFile error: %v", err)
+	}
+}
+
+func TestIntegration_EnableAPI(t *testing.T) {
+	cfg := &config.ProjectConfig{
+		AppName:    "test-enable-api",
+		OutputDir:  "/tmp/test-enable-api",
+		ModulePath: "test-enable-api",
+		Features:   config.FeatureSet{},
+	}
+
+	dir := scaffoldProject(t, cfg)
+	if err := configfile.WriteStateFile(filepath.Join(dir, configfile.StateFileName), cfg); err != nil {
+		t.Fatalf("WriteStateFile error: %v", err)
+	}
+
+	cfg.Features.API = true
+	enableFeature(t, dir, "api", cfg)
+
+	runInDir(t, dir, "go", "mod", "tidy")
+	runInDir(t, dir, "go", "build", "./...")
+	runInDir(t, dir, "go", "vet", "./...")
+	runInDir(t, dir, "go", "test", "./...")
+}
+
+func TestIntegration_EnableMCP(t *testing.T) {
+	cfg := &config.ProjectConfig{
+		AppName:    "test-enable-mcp",
+		OutputDir:  "/tmp/test-enable-mcp",
+		ModulePath: "test-enable-mcp",
+		Features:   config.FeatureSet{},
+	}
+
+	dir := scaffoldProject(t, cfg)
+	if err := configfile.WriteStateFile(filepath.Join(dir, configfile.StateFileName), cfg); err != nil {
+		t.Fatalf("WriteStateFile error: %v", err)
+	}
+
+	cfg.Features.MCP = true
+	enableFeature(t, dir, "mcp", cfg)
+
+	runInDir(t, dir, "go", "mod", "tidy")
+	runInDir(t, dir, "go", "build", "./...")
+	runInDir(t, dir, "go", "vet", "./...")
+	runInDir(t, dir, "go", "test", "./...")
+}
+
+func TestIntegration_EnableDB(t *testing.T) {
+	cfg := &config.ProjectConfig{
+		AppName:    "test-enable-db",
+		OutputDir:  "/tmp/test-enable-db",
+		ModulePath: "test-enable-db",
+		Features:   config.FeatureSet{},
+	}
+
+	dir := scaffoldProject(t, cfg)
+	if err := configfile.WriteStateFile(filepath.Join(dir, configfile.StateFileName), cfg); err != nil {
+		t.Fatalf("WriteStateFile error: %v", err)
+	}
+
+	cfg.Features.DB = true
+	cfg.DBType = config.DBPostgreSQL
+	enableFeature(t, dir, "db", cfg)
+
+	runInDir(t, dir, "go", "mod", "tidy")
+	runInDir(t, dir, "go", "build", "./...")
+	runInDir(t, dir, "go", "vet", "./...")
+	runInDir(t, dir, "go", "test", "./...")
+}
+
+func TestIntegration_EnableCache(t *testing.T) {
+	cfg := &config.ProjectConfig{
+		AppName:    "test-enable-cache",
+		OutputDir:  "/tmp/test-enable-cache",
+		ModulePath: "test-enable-cache",
+		Features:   config.FeatureSet{},
+	}
+
+	dir := scaffoldProject(t, cfg)
+	if err := configfile.WriteStateFile(filepath.Join(dir, configfile.StateFileName), cfg); err != nil {
+		t.Fatalf("WriteStateFile error: %v", err)
+	}
+
+	cfg.Features.Cache = true
+	cfg.CacheType = config.CacheRedis
+	enableFeature(t, dir, "cache", cfg)
+
+	runInDir(t, dir, "go", "mod", "tidy")
+	runInDir(t, dir, "go", "build", "./...")
+	runInDir(t, dir, "go", "vet", "./...")
+	runInDir(t, dir, "go", "test", "./...")
+}
+
+func TestIntegration_EnableMultipleFeatures(t *testing.T) {
+	cfg := &config.ProjectConfig{
+		AppName:    "test-enable-multi",
+		OutputDir:  "/tmp/test-enable-multi",
+		ModulePath: "test-enable-multi",
+		Features:   config.FeatureSet{},
+	}
+
+	dir := scaffoldProject(t, cfg)
+	if err := configfile.WriteStateFile(filepath.Join(dir, configfile.StateFileName), cfg); err != nil {
+		t.Fatalf("WriteStateFile error: %v", err)
+	}
+
+	cfg.Features.API = true
+	enableFeature(t, dir, "api", cfg)
+
+	cfg.Features.MCP = true
+	enableFeature(t, dir, "mcp", cfg)
+
+	cfg.Features.DB = true
+	cfg.DBType = config.DBSQLite
+	enableFeature(t, dir, "db", cfg)
+
 	runInDir(t, dir, "go", "mod", "tidy")
 	runInDir(t, dir, "go", "build", "./...")
 	runInDir(t, dir, "go", "vet", "./...")

@@ -7,6 +7,10 @@ import (
 	"github.com/paularlott/cli"
 )
 
+func init() {
+	Register(completionCmd())
+}
+
 func completionCmd() *cli.Command {
 	return &cli.Command{
 		Name:  "completion",

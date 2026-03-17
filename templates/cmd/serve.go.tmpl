@@ -18,7 +18,12 @@ import (
 
 	mcpserver "{{.ModulePath}}/cmd/mcp"
 {{- end}}
+	// go-scaffolder:serve-imports
 )
+
+func init() {
+	Register(serveCmd())
+}
 
 func serveCmd() *cli.Command {
 	return &cli.Command{
@@ -42,6 +47,7 @@ func serveCmd() *cli.Command {
 			},
 		},
 {{- end}}
+		// go-scaffolder:serve-flags
 		Run: func(ctx context.Context, cmd *cli.Command) error {
 			log := logslog.New(logslog.Config{
 				Level:  cmd.GetString("log-level"),
@@ -53,6 +59,7 @@ func serveCmd() *cli.Command {
 
 			mcpserver.StartMCPServer(log)
 {{- end}}
+			// go-scaffolder:serve-init
 {{- if .Features.API}}
 
 			mux := http.NewServeMux()
@@ -60,10 +67,12 @@ func serveCmd() *cli.Command {
 
 			addr := fmt.Sprintf("%s:%d", cmd.GetString("server-host"), cmd.GetInt("server-port"))
 			log.Info("starting HTTP server", "addr", addr)
+			// go-scaffolder:serve-start
 			return http.ListenAndServe(addr, mux)
 {{- else}}
 
 			log.Info("{{.AppName}} is running")
+			// go-scaffolder:serve-start
 			select {}
 {{- end}}
 		},

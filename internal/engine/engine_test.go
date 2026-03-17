@@ -63,7 +63,7 @@ func TestProperty3_FeatureConditionalFileInclusion(t *testing.T) {
 		manifest := eng.TemplateManifest()
 		for _, entry := range manifest {
 			shouldInclude := eng.shouldInclude(&cfg, entry)
-			outputPath, _ := eng.resolveOutputPath(entry.OutputPath, &cfg)
+			outputPath, _ := eng.resolveOutputPath(entry.OutputPath, &cfg, eng.buildFuncMap(&cfg))
 			_, exists := files[outputPath]
 
 			if shouldInclude && !exists {

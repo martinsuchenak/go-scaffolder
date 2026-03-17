@@ -51,9 +51,10 @@ Property-based tests use [rapid](https://github.com/flyingmutant/rapid) to verif
 
 Unit tests cover specific examples and edge cases:
 
-- **config** -- validation of various valid/invalid configurations
-- **configfile** -- YAML loading, missing files, parse errors
-- **prompt** -- validation functions for app name and output dir
+- **config** -- validation of various valid/invalid configurations, `HasFeature` method
+- **configfile** -- YAML loading, missing files, parse errors, state file write/read
+- **patcher** -- marker-based patching: insert above/below, replace blocks, missing markers, missing files
+- **prompt** -- validation functions for app name, output dir, and resource name
 - **writer** -- file writing, directory creation, error handling
 - **postgen** -- `go mod tidy` execution and error handling
 - **engine/manifest** -- external template loading, overrides, custom feature tags
@@ -78,6 +79,14 @@ Feature combinations tested:
 | AllFeatures | API + MCP + UI + DB(PostgreSQL) + Cache(Redis) + Docker + Nomad |
 | CacheSQLite | DB(SQLite) + Cache(Valkey) |
 | MySQLRedis | API + DB(MySQL) + Cache(Redis) |
+| AddCLICommand | Scaffold minimal + add cli-command "migrate" |
+| AddAPIEndpoint | Scaffold with API + add api-endpoint "user" |
+| AddMCPTool | Scaffold with MCP + add mcp-tool "search" |
+| EnableAPI | Scaffold minimal + enable API feature |
+| EnableMCP | Scaffold minimal + enable MCP feature |
+| EnableDB | Scaffold minimal + enable DB(PostgreSQL) feature |
+| EnableCache | Scaffold minimal + enable Cache(Redis) feature |
+| EnableMultipleFeatures | Scaffold minimal + enable API, MCP, DB sequentially |
 | ConfigFileParity | Verifies identical output between two renders |
 | ConfigFileScaffolding | End-to-end via the actual binary with --config |
 
@@ -97,13 +106,17 @@ Tests for the extension system verify:
 ```
 internal/
 ├── config/config_test.go           # Property tests (1, 2) + unit tests
-├── configfile/configfile_test.go    # Property tests (17, 18) + unit tests
+├── configfile/
+│   ├── configfile_test.go          # Property tests (17, 18) + unit tests
+│   └── statefile_test.go           # State file write/read tests
+├── patcher/
+│   └── patcher_test.go             # Marker patching, replace blocks, edge cases
 ├── engine/
 │   ├── engine_test.go              # Property tests (3-16)
 │   └── manifest_test.go            # External template tests
 ├── writer/writer_test.go           # Unit tests
 ├── postgen/postgen_test.go         # Unit tests
-└── prompt/prompt_test.go           # Unit tests
+└── prompt/prompt_test.go           # Unit tests (incl. resource name validation)
 tests/
 └── integration_test.go             # Integration tests (build tag: integration)
 ```

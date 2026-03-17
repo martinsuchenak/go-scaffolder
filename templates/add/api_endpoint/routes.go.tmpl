@@ -1,0 +1,18 @@
+package routes
+
+import (
+	"net/http"
+
+	"{{.ModulePath}}/internal/{{toSnake .ResourceName}}"
+)
+
+func init() {
+	Register(register{{toPascal .ResourceName}}Routes)
+}
+
+func register{{toPascal .ResourceName}}Routes(mux *http.ServeMux) {
+	handler := {{toSnake .ResourceName}}.NewHandler({{toSnake .ResourceName}}.NewService({{toSnake .ResourceName}}.NewStorage()))
+	mux.HandleFunc("GET /api/{{toKebab .ResourceName}}s", handler.List)
+	mux.HandleFunc("POST /api/{{toKebab .ResourceName}}s", handler.Create)
+	mux.HandleFunc("GET /api/{{toKebab .ResourceName}}s/{id}", handler.Get)
+}

@@ -1,0 +1,11 @@
+package routes
+
+import (
+	"net/http"
+	"testing"
+)
+
+func TestRegister{{toPascal .ResourceName}}Routes(t *testing.T) {
+	mux := http.NewServeMux()
+	register{{toPascal .ResourceName}}Routes(mux)
+}

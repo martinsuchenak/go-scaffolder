@@ -36,3 +36,25 @@ func TestValidateOutputDir(t *testing.T) {
 		}
 	}
 }
+
+func TestValidateResourceName(t *testing.T) {
+	tests := []struct {
+		input   string
+		wantErr bool
+	}{
+		{"my-resource", false},
+		{"my_resource", false},
+		{"MyResource", false},
+		{"resource123", false},
+		{"", true},
+		{"   ", true},
+		{"my resource", true},
+		{"my.resource", true},
+		{"my/resource", true},
+	}
+	for _, tt := range tests {
+		if err := ValidateResourceName(tt.input); (err != nil) != tt.wantErr {
+			t.Errorf("ValidateResourceName(%q) error = %v, wantErr %v", tt.input, err, tt.wantErr)
+		}
+	}
+}

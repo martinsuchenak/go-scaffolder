@@ -67,13 +67,24 @@ See [Extending with Custom Templates](extending.md) for details.
 ## CLI Reference
 
 ```
-go-scaffolder [flags]
+go-scaffolder [flags]                  Scaffold a new project
+go-scaffolder add cli-command [flags]  Add a CLI command to existing project
+go-scaffolder add api-endpoint [flags] Add an API endpoint to existing project
+go-scaffolder add mcp-tool [flags]     Add an MCP tool to existing project
+go-scaffolder add feature [flags]      Enable a feature on existing project
 
-Flags:
+Scaffold flags:
     --config <path>      Path to YAML config file (non-interactive mode)
     --templates <path>   Path to external templates directory
     -v, --version        Show version
     -h, --help           Show help
+
+Add flags:
+    --name <name>        Name of the new component (prompted if omitted)
+
+Feature flags:
+    --db-type <type>     Database type: mysql, postgresql, sqlite
+    --cache-type <type>  Cache type: redis, valkey
 ```
 
 ## What Happens During Scaffolding
@@ -83,6 +94,30 @@ Flags:
 3. **Feature resolution** -- CLI is always enabled; Nomad auto-includes Docker
 4. **Template rendering** -- all applicable templates are rendered to memory
 5. **File writing** -- files are written to the output directory (atomic: all or nothing)
-6. **Post-generation** -- `go mod tidy` resolves dependencies to latest versions
+6. **State file** -- `.go-scaffolder.yaml` is written to record the project config for future `add` operations
+7. **Post-generation** -- `go mod tidy` resolves dependencies to latest versions
 
 If any template fails to render, no files are written. If `go mod tidy` fails, the generated files are preserved and you can run it manually.
+
+## Adding Components to an Existing Project
+
+After scaffolding, you can add new components without re-scaffolding:
+
+```sh
+cd my-service
+
+# Add a new CLI command
+go-scaffolder add cli-command --name migrate
+
+# Add a new API endpoint (requires API feature)
+go-scaffolder add api-endpoint --name user
+
+# Add a new MCP tool (requires MCP feature)
+go-scaffolder add mcp-tool --name search
+
+# Enable a feature that wasn't originally selected
+go-scaffolder add feature
+go-scaffolder add feature --db-type postgresql
+```
+
+See [Adding Components](adding-components.md) for full details.

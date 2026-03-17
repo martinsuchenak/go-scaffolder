@@ -15,12 +15,14 @@ templates/
 │   ├── Taskfile.yml.tmpl
 │   └── config.toml.tmpl
 ├── cmd/                        # CLI feature (always included)
-│   ├── register.go.tmpl
-│   ├── serve.go.tmpl
-│   ├── init.go.tmpl
-│   └── completion.go.tmpl
+│   ├── register.go.tmpl        #   Command registry
+│   ├── serve.go.tmpl           #   Self-registers via init()
+│   ├── init.go.tmpl            #   Self-registers via init()
+│   └── completion.go.tmpl      #   Self-registers via init()
 ├── api/                        # API feature
-│   ├── cmd/routes/api_routes.go.tmpl
+│   ├── cmd/routes/
+│   │   ├── api_routes.go.tmpl  #   Route registry + health/metrics
+│   │   └── sample_routes.go.tmpl # Self-registers via init()
 │   ├── internal/rest/helpers.go.tmpl
 │   ├── internal/auth/auth.go.tmpl
 │   ├── internal/ctxkeys/ctxkeys.go.tmpl
@@ -29,7 +31,9 @@ templates/
 │   ├── internal/sample/storage.go.tmpl
 │   └── openapi.yaml.tmpl
 ├── mcp/                        # MCP feature
-│   └── cmd/mcp/mcp.go.tmpl
+│   └── cmd/mcp/
+│       ├── mcp.go.tmpl         #   Server + tool registry
+│       └── sample_tool.go.tmpl #   Self-registers via init()
 ├── ui/                         # UI feature
 │   └── web/...
 ├── db/                         # DB feature
@@ -43,6 +47,10 @@ templates/
 │   └── Dockerfile.tmpl
 ├── nomad/                      # Nomad feature
 │   └── nomad.tmpl
+├── add/                        # Templates for "add" operations
+│   ├── cli_command/            #   New CLI command
+│   ├── api_endpoint/           #   New API endpoint (handler/service/storage/routes)
+│   └── mcp_tool/               #   New MCP tool
 └── tests/                      # Test file templates (mirrors source structure)
     ├── base/...
     ├── cmd/...
@@ -96,6 +104,7 @@ Every template receives a `ProjectConfig` struct as its data context:
 | `.DBType` | `string` | `"mysql"`, `"postgresql"`, or `"sqlite"` |
 | `.CacheType` | `string` | `"redis"` or `"valkey"` |
 | `.CustomTags` | `[]string` | Custom feature tags from config |
+| `.ResourceName` | `string` | Name of the resource being added (only in `add` templates) |
 
 ## Template Functions
 
@@ -170,6 +179,21 @@ The scaffolder uses a two-pass approach:
 2. **Write** -- only if all templates rendered successfully, files are written to disk
 
 If any template fails to parse or execute, no files are written. This prevents partial/broken project output.
+
+## Marker Comments
+
+Generated files contain marker comments that enable the `add feature` command to patch shared files when enabling new features. These markers serve as insertion points:
+
+| Marker | File | Purpose |
+|--------|------|---------|
+| `// go-scaffolder:serve-imports` | `cmd/serve.go` | Insert new import statements |
+| `// go-scaffolder:serve-flags` | `cmd/serve.go` | Insert new CLI flags |
+| `// go-scaffolder:serve-init` | `cmd/serve.go` | Insert service initialization code |
+| `// go-scaffolder:serve-start` | `cmd/serve.go` | Mark the server start section (replaceable) |
+| `# go-scaffolder:config-sections` | `<app>-config.toml` | Insert new TOML config sections |
+| `# go-scaffolder:taskfile-tasks` | `Taskfile.yml` | Insert new task definitions |
+
+If a marker is removed by the user, the patcher will not modify the file and will instead print the code to add manually.
 
 ## Escaping Template Syntax
 

@@ -20,17 +20,23 @@ my-service/
 │   ├── version.go                  # Version/Date variables (injected via ldflags)
 │   └── version_test.go
 │
+├── .go-scaffolder.yaml              # State file (records project config for add operations)
+│
 ├── cmd/
-│   ├── register.go                 # Command registration
-│   ├── serve.go                    # Serve sub-command
-│   ├── init.go                     # Config init sub-command
-│   ├── completion.go               # Shell completion sub-command
+│   ├── register.go                 # Command registry (self-registration support)
+│   ├── serve.go                    # Serve sub-command (self-registers via init())
+│   ├── init.go                     # Config init sub-command (self-registers via init())
+│   ├── completion.go               # Shell completion sub-command (self-registers via init())
 │   ├── routes/
-│   │   ├── api_routes.go           # HTTP route registration
-│   │   └── api_routes_test.go
+│   │   ├── api_routes.go           # Route registry + health/metrics endpoints
+│   │   ├── sample_routes.go        # Sample resource routes (self-registers via init())
+│   │   ├── api_routes_test.go
+│   │   └── sample_routes_test.go
 │   └── mcp/
-│       ├── mcp.go                  # MCP server setup
-│       └── mcp_test.go
+│       ├── mcp.go                  # MCP server + tool registry
+│       ├── sample_tool.go          # Sample MCP tool (self-registers via init())
+│       ├── mcp_test.go
+│       └── sample_tool_test.go
 │
 ├── internal/
 │   ├── rest/
@@ -139,6 +145,12 @@ The generated API code follows a **Handler -> Service -> Storage** layering patt
 - **Handler** -- HTTP request/response handling, input validation, calls service
 - **Service** -- business logic, orchestration, calls storage
 - **Storage** -- data access (in-memory by default, replace with DB calls)
+
+## Self-Registration Pattern
+
+CLI commands, API routes, and MCP tools use Go's `init()` function to self-register with a central registry. This means adding a new component (via `go-scaffolder add`) only requires dropping new files -- no existing files need to be edited.
+
+See [Adding Components](adding-components.md) for details.
 
 ## DNS SRV Resolution
 

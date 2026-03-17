@@ -6,6 +6,7 @@ A CLI tool that generates fully functional Go microservice projects.
 
 - [Getting Started](getting-started.md) -- installation, quick start, CLI reference, and what happens during scaffolding
 - [Features](features.md) -- detailed description of each selectable feature and what it generates
+- [Adding Components](adding-components.md) -- add CLI commands, API endpoints, and MCP tools to existing projects
 - [How Templates Work](templates.md) -- template structure, manifest, data context, functions, feature guards, and rendering pipeline
 - [Extending with Custom Templates](extending.md) -- adding new templates, overriding built-in ones, custom feature tags, and examples
 - [Config File Reference](config-file.md) -- YAML schema for non-interactive mode, validation rules, and examples
@@ -53,5 +54,20 @@ A CLI tool that generates fully functional Go microservice projects.
                    ┌─────────▼─────────┐
                    │   Post-generation  │
                    │   go mod tidy      │
+                   └─────────┬─────────┘
+                             │
+                   ┌─────────▼─────────┐
+                   │   State File       │
+                   │  .go-scaffolder    │
+                   │  .yaml             │
+                   └───────────────────┘
+
+                   ┌───────────────────┐
+                   │   Add Component    │
+                   │                    │
+                   │  Read state file   │
+                   │  → Render snippet  │
+                   │  → Write new files │
+                   │  → go mod tidy     │
                    └───────────────────┘
 ```

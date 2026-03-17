@@ -1,0 +1,24 @@
+package mcp
+
+import (
+	"context"
+	"fmt"
+
+	mcplib "github.com/paularlott/mcp"
+)
+
+func init() {
+	RegisterTool(register{{toPascal .ResourceName}}Tool)
+}
+
+func register{{toPascal .ResourceName}}Tool(server *mcplib.Server) {
+	server.RegisterTool(
+		mcplib.NewTool("{{toKebab .ResourceName}}", "{{toPascal .ResourceName}} tool for {{.AppName}}",
+			mcplib.String("input", "Input parameter"),
+		),
+		func(ctx context.Context, req *mcplib.ToolRequest) (*mcplib.ToolResponse, error) {
+			input := req.StringOr("input", "")
+			return mcplib.NewToolResponseText(fmt.Sprintf("{{toPascal .ResourceName}} result: %s", input)), nil
+		},
+	)
+}

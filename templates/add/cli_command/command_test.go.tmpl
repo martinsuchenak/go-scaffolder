@@ -1,0 +1,13 @@
+package cmd
+
+import "testing"
+
+func Test{{toPascal .ResourceName}}CmdExists(t *testing.T) {
+	cmd := {{toCamel .ResourceName}}Cmd()
+	if cmd == nil {
+		t.Fatal("{{toCamel .ResourceName}}Cmd() should not return nil")
+	}
+	if cmd.Name != "{{toKebab .ResourceName}}" {
+		t.Errorf("expected command name %q, got %q", "{{toKebab .ResourceName}}", cmd.Name)
+	}
+}

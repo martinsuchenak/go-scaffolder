@@ -72,6 +72,7 @@ func (e *Engine) TemplateManifest() []TemplateEntry {
 
 		// API feature
 		{TemplatePath: "api/cmd/routes/api_routes.go.tmpl", OutputPath: "cmd/routes/api_routes.go", RequiredFeatures: []string{"api"}},
+		{TemplatePath: "api/cmd/routes/sample_routes.go.tmpl", OutputPath: "cmd/routes/sample_routes.go", RequiredFeatures: []string{"api"}},
 		{TemplatePath: "api/internal/rest/helpers.go.tmpl", OutputPath: "internal/rest/helpers.go", RequiredFeatures: []string{"api"}},
 		{TemplatePath: "api/internal/auth/auth.go.tmpl", OutputPath: "internal/auth/auth.go", RequiredFeatures: []string{"api"}},
 		{TemplatePath: "api/internal/ctxkeys/ctxkeys.go.tmpl", OutputPath: "internal/ctxkeys/ctxkeys.go", RequiredFeatures: []string{"api"}},
@@ -82,6 +83,7 @@ func (e *Engine) TemplateManifest() []TemplateEntry {
 
 		// MCP feature
 		{TemplatePath: "mcp/cmd/mcp/mcp.go.tmpl", OutputPath: "cmd/mcp/mcp.go", RequiredFeatures: []string{"mcp"}},
+		{TemplatePath: "mcp/cmd/mcp/sample_tool.go.tmpl", OutputPath: "cmd/mcp/sample_tool.go", RequiredFeatures: []string{"mcp"}},
 
 		// UI feature
 		{TemplatePath: "ui/web/embed.go.tmpl", OutputPath: "web/embed.go", RequiredFeatures: []string{"ui"}},
@@ -122,6 +124,7 @@ func (e *Engine) TemplateManifest() []TemplateEntry {
 
 		// Test file templates - API
 		{TemplatePath: "tests/api/cmd/routes/api_routes_test.go.tmpl", OutputPath: "cmd/routes/api_routes_test.go", RequiredFeatures: []string{"api"}},
+		{TemplatePath: "tests/api/cmd/routes/sample_routes_test.go.tmpl", OutputPath: "cmd/routes/sample_routes_test.go", RequiredFeatures: []string{"api"}},
 		{TemplatePath: "tests/api/internal/rest/helpers_test.go.tmpl", OutputPath: "internal/rest/helpers_test.go", RequiredFeatures: []string{"api"}},
 		{TemplatePath: "tests/api/internal/auth/auth_test.go.tmpl", OutputPath: "internal/auth/auth_test.go", RequiredFeatures: []string{"api"}},
 		{TemplatePath: "tests/api/internal/ctxkeys/ctxkeys_test.go.tmpl", OutputPath: "internal/ctxkeys/ctxkeys_test.go", RequiredFeatures: []string{"api"}},
@@ -131,6 +134,7 @@ func (e *Engine) TemplateManifest() []TemplateEntry {
 
 		// Test file templates - MCP
 		{TemplatePath: "tests/mcp/cmd/mcp/mcp_test.go.tmpl", OutputPath: "cmd/mcp/mcp_test.go", RequiredFeatures: []string{"mcp"}},
+		{TemplatePath: "tests/mcp/cmd/mcp/sample_tool_test.go.tmpl", OutputPath: "cmd/mcp/sample_tool_test.go", RequiredFeatures: []string{"mcp"}},
 
 		// Test file templates - DB
 		{TemplatePath: "tests/db/internal/db/db_test.go.tmpl", OutputPath: "internal/db/db_test.go", RequiredFeatures: []string{"db"}},
@@ -239,7 +243,183 @@ func (e *Engine) RenderAll(cfg *config.ProjectConfig) (map[string][]byte, error)
 			return nil, fmt.Errorf("rendering template %s: %w", entry.TemplatePath, err)
 		}
 
-		outputPath, err := e.resolveOutputPath(entry.OutputPath, cfg)
+		outputPath, err := e.resolveOutputPath(entry.OutputPath, cfg, funcMap)
+		if err != nil {
+			return nil, fmt.Errorf("resolving output path %s: %w", entry.OutputPath, err)
+		}
+
+		files[outputPath] = buf.Bytes()
+	}
+
+	return files, nil
+}
+
+func (e *Engine) EnableFeatureManifest(feature string) []TemplateEntry {
+	switch feature {
+	case "api":
+		return []TemplateEntry{
+			{TemplatePath: "api/cmd/routes/api_routes.go.tmpl", OutputPath: "cmd/routes/api_routes.go"},
+			{TemplatePath: "api/cmd/routes/sample_routes.go.tmpl", OutputPath: "cmd/routes/sample_routes.go"},
+			{TemplatePath: "api/internal/rest/helpers.go.tmpl", OutputPath: "internal/rest/helpers.go"},
+			{TemplatePath: "api/internal/auth/auth.go.tmpl", OutputPath: "internal/auth/auth.go"},
+			{TemplatePath: "api/internal/ctxkeys/ctxkeys.go.tmpl", OutputPath: "internal/ctxkeys/ctxkeys.go"},
+			{TemplatePath: "api/internal/sample/handler.go.tmpl", OutputPath: "internal/sample/handler.go"},
+			{TemplatePath: "api/internal/sample/service.go.tmpl", OutputPath: "internal/sample/service.go"},
+			{TemplatePath: "api/internal/sample/storage.go.tmpl", OutputPath: "internal/sample/storage.go"},
+			{TemplatePath: "api/openapi.yaml.tmpl", OutputPath: "openapi.yaml"},
+			{TemplatePath: "tests/api/cmd/routes/api_routes_test.go.tmpl", OutputPath: "cmd/routes/api_routes_test.go"},
+			{TemplatePath: "tests/api/cmd/routes/sample_routes_test.go.tmpl", OutputPath: "cmd/routes/sample_routes_test.go"},
+			{TemplatePath: "tests/api/internal/rest/helpers_test.go.tmpl", OutputPath: "internal/rest/helpers_test.go"},
+			{TemplatePath: "tests/api/internal/auth/auth_test.go.tmpl", OutputPath: "internal/auth/auth_test.go"},
+			{TemplatePath: "tests/api/internal/ctxkeys/ctxkeys_test.go.tmpl", OutputPath: "internal/ctxkeys/ctxkeys_test.go"},
+			{TemplatePath: "tests/api/internal/sample/handler_test.go.tmpl", OutputPath: "internal/sample/handler_test.go"},
+			{TemplatePath: "tests/api/internal/sample/service_test.go.tmpl", OutputPath: "internal/sample/service_test.go"},
+			{TemplatePath: "tests/api/internal/sample/storage_test.go.tmpl", OutputPath: "internal/sample/storage_test.go"},
+		}
+	case "mcp":
+		return []TemplateEntry{
+			{TemplatePath: "mcp/cmd/mcp/mcp.go.tmpl", OutputPath: "cmd/mcp/mcp.go"},
+			{TemplatePath: "mcp/cmd/mcp/sample_tool.go.tmpl", OutputPath: "cmd/mcp/sample_tool.go"},
+			{TemplatePath: "tests/mcp/cmd/mcp/mcp_test.go.tmpl", OutputPath: "cmd/mcp/mcp_test.go"},
+			{TemplatePath: "tests/mcp/cmd/mcp/sample_tool_test.go.tmpl", OutputPath: "cmd/mcp/sample_tool_test.go"},
+		}
+	case "ui":
+		return []TemplateEntry{
+			{TemplatePath: "ui/web/embed.go.tmpl", OutputPath: "web/embed.go"},
+			{TemplatePath: "ui/web/templates/base.html.tmpl", OutputPath: "web/templates/base.html"},
+			{TemplatePath: "ui/web/package.json.tmpl", OutputPath: "web/package.json"},
+			{TemplatePath: "ui/web/dist/.gitkeep.tmpl", OutputPath: "web/dist/.gitkeep"},
+			{TemplatePath: "ui/web/src/main.ts.tmpl", OutputPath: "web/src/main.ts"},
+			{TemplatePath: "ui/web/src/style.css.tmpl", OutputPath: "web/src/style.css"},
+			{TemplatePath: "ui/web/vite.config.ts.tmpl", OutputPath: "web/vite.config.ts"},
+		}
+	case "db":
+		return []TemplateEntry{
+			{TemplatePath: "db/internal/db/db.go.tmpl", OutputPath: "internal/db/db.go"},
+			{TemplatePath: "db/internal/db/schema.sql.tmpl", OutputPath: "internal/db/schema.sql"},
+			{TemplatePath: "tests/db/internal/db/db_test.go.tmpl", OutputPath: "internal/db/db_test.go"},
+		}
+	case "cache":
+		return nil
+	case "docker":
+		return []TemplateEntry{
+			{TemplatePath: "docker/Dockerfile.tmpl", OutputPath: "Dockerfile"},
+		}
+	case "nomad":
+		return []TemplateEntry{
+			{TemplatePath: "nomad/nomad.tmpl", OutputPath: "{{.AppName}}.nomad"},
+		}
+	}
+	return nil
+}
+
+func (e *Engine) EnableFeatureCacheManifest(cacheType config.CacheType) []TemplateEntry {
+	switch cacheType {
+	case config.CacheRedis:
+		return []TemplateEntry{
+			{TemplatePath: "cache/redis/internal/redis/redis.go.tmpl", OutputPath: "internal/redis/redis.go"},
+			{TemplatePath: "tests/cache/redis/internal/redis/redis_test.go.tmpl", OutputPath: "internal/redis/redis_test.go"},
+		}
+	case config.CacheValkey:
+		return []TemplateEntry{
+			{TemplatePath: "cache/valkey/internal/valkey/valkey.go.tmpl", OutputPath: "internal/valkey/valkey.go"},
+			{TemplatePath: "tests/cache/valkey/internal/valkey/valkey_test.go.tmpl", OutputPath: "internal/valkey/valkey_test.go"},
+		}
+	}
+	return nil
+}
+
+func (e *Engine) EnableFeatureSRVManifest() []TemplateEntry {
+	return []TemplateEntry{
+		{TemplatePath: "resolve/internal/resolve/resolve.go.tmpl", OutputPath: "internal/resolve/resolve.go"},
+		{TemplatePath: "tests/resolve/internal/resolve/resolve_test.go.tmpl", OutputPath: "internal/resolve/resolve_test.go"},
+	}
+}
+
+func (e *Engine) RenderFeatureFiles(cfg *config.ProjectConfig, entries []TemplateEntry) (map[string][]byte, error) {
+	funcMap := e.buildFuncMap(cfg)
+	files := make(map[string][]byte)
+
+	for _, entry := range entries {
+		content, err := e.readTemplate(entry)
+		if err != nil {
+			return nil, fmt.Errorf("reading template %s: %w", entry.TemplatePath, err)
+		}
+
+		tmpl, err := template.New(entry.TemplatePath).Funcs(funcMap).Parse(string(content))
+		if err != nil {
+			return nil, fmt.Errorf("parsing template %s: %w", entry.TemplatePath, err)
+		}
+
+		var buf bytes.Buffer
+		if err := tmpl.Execute(&buf, cfg); err != nil {
+			return nil, fmt.Errorf("rendering template %s: %w", entry.TemplatePath, err)
+		}
+
+		outputPath, err := e.resolveOutputPath(entry.OutputPath, cfg, funcMap)
+		if err != nil {
+			return nil, fmt.Errorf("resolving output path %s: %w", entry.OutputPath, err)
+		}
+
+		files[outputPath] = buf.Bytes()
+	}
+
+	return files, nil
+}
+
+func (e *Engine) AddManifest(addType string) []TemplateEntry {
+	switch addType {
+	case "cli-command":
+		return []TemplateEntry{
+			{TemplatePath: "add/cli_command/command.go.tmpl", OutputPath: "cmd/{{toKebab .ResourceName}}.go"},
+			{TemplatePath: "add/cli_command/command_test.go.tmpl", OutputPath: "cmd/{{toKebab .ResourceName}}_test.go"},
+		}
+	case "api-endpoint":
+		return []TemplateEntry{
+			{TemplatePath: "add/api_endpoint/handler.go.tmpl", OutputPath: "internal/{{toSnake .ResourceName}}/handler.go"},
+			{TemplatePath: "add/api_endpoint/service.go.tmpl", OutputPath: "internal/{{toSnake .ResourceName}}/service.go"},
+			{TemplatePath: "add/api_endpoint/storage.go.tmpl", OutputPath: "internal/{{toSnake .ResourceName}}/storage.go"},
+			{TemplatePath: "add/api_endpoint/routes.go.tmpl", OutputPath: "cmd/routes/{{toSnake .ResourceName}}_routes.go"},
+			{TemplatePath: "add/api_endpoint/handler_test.go.tmpl", OutputPath: "internal/{{toSnake .ResourceName}}/handler_test.go"},
+			{TemplatePath: "add/api_endpoint/service_test.go.tmpl", OutputPath: "internal/{{toSnake .ResourceName}}/service_test.go"},
+			{TemplatePath: "add/api_endpoint/storage_test.go.tmpl", OutputPath: "internal/{{toSnake .ResourceName}}/storage_test.go"},
+			{TemplatePath: "add/api_endpoint/routes_test.go.tmpl", OutputPath: "cmd/routes/{{toSnake .ResourceName}}_routes_test.go"},
+		}
+	case "mcp-tool":
+		return []TemplateEntry{
+			{TemplatePath: "add/mcp_tool/tool.go.tmpl", OutputPath: "cmd/mcp/{{toSnake .ResourceName}}.go"},
+			{TemplatePath: "add/mcp_tool/tool_test.go.tmpl", OutputPath: "cmd/mcp/{{toSnake .ResourceName}}_test.go"},
+		}
+	}
+	return nil
+}
+
+func (e *Engine) RenderAdd(cfg *config.ProjectConfig, addType string) (map[string][]byte, error) {
+	funcMap := e.buildFuncMap(cfg)
+	manifest := e.AddManifest(addType)
+	if len(manifest) == 0 {
+		return nil, fmt.Errorf("unknown add type: %s", addType)
+	}
+
+	files := make(map[string][]byte)
+
+	for _, entry := range manifest {
+		content, err := e.readTemplate(entry)
+		if err != nil {
+			return nil, fmt.Errorf("reading template %s: %w", entry.TemplatePath, err)
+		}
+
+		tmpl, err := template.New(entry.TemplatePath).Funcs(funcMap).Parse(string(content))
+		if err != nil {
+			return nil, fmt.Errorf("parsing template %s: %w", entry.TemplatePath, err)
+		}
+
+		var buf bytes.Buffer
+		if err := tmpl.Execute(&buf, cfg); err != nil {
+			return nil, fmt.Errorf("rendering template %s: %w", entry.TemplatePath, err)
+		}
+
+		outputPath, err := e.resolveOutputPath(entry.OutputPath, cfg, funcMap)
 		if err != nil {
 			return nil, fmt.Errorf("resolving output path %s: %w", entry.OutputPath, err)
 		}
@@ -262,11 +442,11 @@ func (e *Engine) shouldInclude(cfg *config.ProjectConfig, entry TemplateEntry) b
 	return true
 }
 
-func (e *Engine) resolveOutputPath(path string, cfg *config.ProjectConfig) (string, error) {
+func (e *Engine) resolveOutputPath(path string, cfg *config.ProjectConfig, funcMap template.FuncMap) (string, error) {
 	if !strings.Contains(path, "{{") {
 		return path, nil
 	}
-	tmpl, err := template.New("path").Parse(path)
+	tmpl, err := template.New("path").Funcs(funcMap).Parse(path)
 	if err != nil {
 		return "", err
 	}

@@ -1,0 +1,48 @@
+package {{toSnake .ResourceName}}
+
+import (
+	"context"
+	"fmt"
+	"sync"
+)
+
+type Storage struct {
+	mu    sync.RWMutex
+	items map[string]*{{toPascal .ResourceName}}
+}
+
+func NewStorage() *Storage {
+	return &Storage{
+		items: make(map[string]*{{toPascal .ResourceName}}),
+	}
+}
+
+func (s *Storage) List(ctx context.Context) ([]{{toPascal .ResourceName}}, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	result := make([]{{toPascal .ResourceName}}, 0, len(s.items))
+	for _, item := range s.items {
+		result = append(result, *item)
+	}
+	return result, nil
+}
+
+func (s *Storage) Get(ctx context.Context, id string) (*{{toPascal .ResourceName}}, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	item, ok := s.items[id]
+	if !ok {
+		return nil, fmt.Errorf("{{toSnake .ResourceName}} not found: %s", id)
+	}
+	return item, nil
+}
+
+func (s *Storage) Create(ctx context.Context, item *{{toPascal .ResourceName}}) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.items[item.ID] = item
+	return nil
+}
