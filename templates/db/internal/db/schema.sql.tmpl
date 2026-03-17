@@ -1,0 +1,29 @@
+-- Schema for {{.AppName}}
+-- Uses UUIDv7 for primary keys
+
+{{- if eq (toString .DBType) "postgresql"}}
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+
+CREATE TABLE IF NOT EXISTS samples (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+{{- end}}
+{{- if eq (toString .DBType) "mysql"}}
+CREATE TABLE IF NOT EXISTS samples (
+    id BINARY(16) PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+{{- end}}
+{{- if eq (toString .DBType) "sqlite"}}
+CREATE TABLE IF NOT EXISTS samples (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+{{- end}}

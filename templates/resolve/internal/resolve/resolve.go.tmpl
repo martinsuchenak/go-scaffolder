@@ -1,0 +1,256 @@
+package resolve
+
+import (
+	"context"
+	"fmt"
+	"math/rand"
+	"net"
+	"net/url"
+	"strconv"
+	"strings"
+	"sync"
+	"time"
+
+	"github.com/paularlott/logger"
+)
+
+type SRVResult struct {
+	Host     string
+	Port     uint16
+	Priority uint16
+	Weight   uint16
+}
+
+type CacheEntry struct {
+	Results   []SRVResult
+	ExpiresAt time.Time
+}
+
+type Resolver struct {
+	cache    map[string]*CacheEntry
+	cacheMu  sync.RWMutex
+	cacheTTL time.Duration
+	log      logger.Logger
+}
+
+func NewResolver(log logger.Logger) *Resolver {
+	return &Resolver{
+		cache:    make(map[string]*CacheEntry),
+		cacheTTL: 60 * time.Second,
+		log:      log,
+	}
+}
+
+func (r *Resolver) SetCacheTTL(ttl time.Duration) {
+	r.cacheTTL = ttl
+}
+
+func (r *Resolver) ClearCache() {
+	r.cacheMu.Lock()
+	defer r.cacheMu.Unlock()
+	r.cache = make(map[string]*CacheEntry)
+}
+
+func (r *Resolver) checkCache(key string) ([]SRVResult, bool) {
+	r.cacheMu.RLock()
+	defer r.cacheMu.RUnlock()
+
+	entry, exists := r.cache[key]
+	if !exists || time.Now().After(entry.ExpiresAt) {
+		return nil, false
+	}
+	return entry.Results, true
+}
+
+func (r *Resolver) addToCache(key string, results []SRVResult) {
+	r.cacheMu.Lock()
+	defer r.cacheMu.Unlock()
+
+	r.cache[key] = &CacheEntry{
+		Results:   results,
+		ExpiresAt: time.Now().Add(r.cacheTTL),
+	}
+}
+
+func (r *Resolver) LookupSRV(host string, defaultPort uint16) (*SRVResult, error) {
+	results, err := r.LookupAllSRV(host, defaultPort)
+	if err != nil {
+		return nil, err
+	}
+	if len(results) == 0 {
+		return &SRVResult{Host: host, Port: defaultPort}, nil
+	}
+	return &results[0], nil
+}
+
+func (r *Resolver) LookupAllSRV(host string, defaultPort uint16) ([]SRVResult, error) {
+	if cached, ok := r.checkCache(host); ok {
+		return cached, nil
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	resolver := net.Resolver{}
+	_, addrs, err := resolver.LookupSRV(ctx, "", "", host)
+	if err != nil || len(addrs) == 0 {
+		fallback := SRVResult{Host: host, Port: defaultPort}
+		return []SRVResult{fallback}, nil
+	}
+
+	var srvs []SRVResult
+	for _, addr := range addrs {
+		target := strings.TrimSuffix(addr.Target, ".")
+		if target == "" || target == "." {
+			continue
+		}
+		srvs = append(srvs, SRVResult{
+			Host:     target,
+			Port:     addr.Port,
+			Priority: addr.Priority,
+			Weight:   addr.Weight,
+		})
+	}
+
+	if len(srvs) == 0 {
+		fallback := SRVResult{Host: host, Port: defaultPort}
+		return []SRVResult{fallback}, nil
+	}
+
+	ordered := orderSRVRecords(srvs)
+	r.addToCache(host, ordered)
+
+	r.log.Debug("resolved SRV", "host", host, "results", len(ordered))
+	return ordered, nil
+}
+
+func (r *Resolver) LookupIP(host string) ([]string, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	resolver := net.Resolver{}
+	addrs, err := resolver.LookupHost(ctx, host)
+	if err != nil {
+		return nil, fmt.Errorf("resolving host %s: %w", host, err)
+	}
+	return addrs, nil
+}
+
+func (r *Resolver) ResolveSRVAddress(host string, defaultPort uint16) (string, error) {
+	result, err := r.LookupSRV(host, defaultPort)
+	if err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("%s:%d", result.Host, result.Port), nil
+}
+
+func (r *Resolver) ResolveSRVHttp(uri string) string {
+	if !strings.HasPrefix(uri, "srv+") && !strings.HasPrefix(uri, "SRV+") {
+		if !strings.HasPrefix(uri, "http://") && !strings.HasPrefix(uri, "https://") {
+			return "https://" + uri
+		}
+		return uri
+	}
+
+	u, err := url.Parse(uri[4:])
+	if err != nil {
+		return uri[4:]
+	}
+
+	result, err := r.LookupSRV(u.Hostname(), 443)
+	if err != nil || result.Port == 0 {
+		return uri[4:]
+	}
+
+	u.Host = net.JoinHostPort(u.Hostname(), strconv.Itoa(int(result.Port)))
+	return u.String()
+}
+
+// orderSRVRecords orders SRV records per RFC 2782:
+// ascending priority, then weighted random selection within each priority group.
+func orderSRVRecords(srvs []SRVResult) []SRVResult {
+	if len(srvs) <= 1 {
+		return srvs
+	}
+
+	prioSet := map[uint16]struct{}{}
+	for _, s := range srvs {
+		prioSet[s.Priority] = struct{}{}
+	}
+
+	priorities := make([]uint16, 0, len(prioSet))
+	for p := range prioSet {
+		priorities = append(priorities, p)
+	}
+	for i := 1; i < len(priorities); i++ {
+		key := priorities[i]
+		j := i - 1
+		for j >= 0 && priorities[j] > key {
+			priorities[j+1] = priorities[j]
+			j--
+		}
+		priorities[j+1] = key
+	}
+
+	rnd := rand.New(rand.NewSource(time.Now().UnixNano()))
+	var ordered []SRVResult
+
+	for _, p := range priorities {
+		var candidates []SRVResult
+		for _, s := range srvs {
+			if s.Priority == p {
+				candidates = append(candidates, s)
+			}
+		}
+
+		for len(candidates) > 0 {
+			total := 0
+			for _, c := range candidates {
+				total += int(c.Weight)
+			}
+
+			var idx int
+			if total == 0 {
+				idx = rnd.Intn(len(candidates))
+			} else {
+				pick := rnd.Intn(total)
+				sum := 0
+				for i, c := range candidates {
+					sum += int(c.Weight)
+					if pick < sum {
+						idx = i
+						break
+					}
+				}
+			}
+
+			ordered = append(ordered, candidates[idx])
+			candidates = append(candidates[:idx], candidates[idx+1:]...)
+		}
+	}
+
+	return ordered
+}
+
+// Package-level convenience using a default resolver with no logging.
+var defaultResolver = NewResolver(logger.NewNullLogger())
+
+func LookupSRV(host string, defaultPort uint16) (*SRVResult, error) {
+	return defaultResolver.LookupSRV(host, defaultPort)
+}
+
+func LookupAllSRV(host string, defaultPort uint16) ([]SRVResult, error) {
+	return defaultResolver.LookupAllSRV(host, defaultPort)
+}
+
+func LookupIP(host string) ([]string, error) {
+	return defaultResolver.LookupIP(host)
+}
+
+func ResolveSRVHttp(uri string) string {
+	return defaultResolver.ResolveSRVHttp(uri)
+}
+
+func SetDefaultResolver(r *Resolver) {
+	defaultResolver = r
+}

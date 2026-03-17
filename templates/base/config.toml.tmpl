@@ -1,0 +1,46 @@
+[log]
+level = "info"
+format = "text"
+{{- if .Features.API}}
+
+[server]
+host = "0.0.0.0"
+port = 8080
+{{- end}}
+{{- if .Features.DB}}
+
+[database]
+{{- if eq (toString .DBType) "postgresql"}}
+host = "localhost"
+port = 5432
+user = "postgres"
+password = "postgres"
+name = "{{.AppName}}"
+sslmode = "disable"
+{{- end}}
+{{- if eq (toString .DBType) "mysql"}}
+host = "localhost"
+port = 3306
+user = "root"
+password = "root"
+name = "{{.AppName}}"
+{{- end}}
+{{- if eq (toString .DBType) "sqlite"}}
+path = "{{.AppName}}.db"
+{{- end}}
+{{- end}}
+{{- if and .Features.Cache (eq (toString .CacheType) "redis")}}
+
+[redis]
+host = "localhost"
+port = 6379
+password = ""
+db = 0
+{{- end}}
+{{- if and .Features.Cache (eq (toString .CacheType) "valkey")}}
+
+[valkey]
+host = "localhost"
+port = 6379
+password = ""
+{{- end}}

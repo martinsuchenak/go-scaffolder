@@ -1,0 +1,32 @@
+package mcp
+
+import (
+	"context"
+	"fmt"
+	"net/http"
+
+	"github.com/paularlott/logger"
+	mcplib "github.com/paularlott/mcp"
+)
+
+func StartMCPServer(log logger.Logger) {
+	server := mcplib.NewServer("{{.AppName}}-mcp", "1.0.0")
+
+	server.RegisterTool(
+		mcplib.NewTool("sample-tool", "A sample MCP tool for {{.AppName}}",
+			mcplib.String("input", "Sample input parameter"),
+		),
+		func(ctx context.Context, req *mcplib.ToolRequest) (*mcplib.ToolResponse, error) {
+			input := req.StringOr("input", "world")
+			return mcplib.NewToolResponseText(fmt.Sprintf("Hello from {{.AppName}}: %s", input)), nil
+		},
+	)
+
+	go func() {
+		log.Info("starting MCP server on :9000")
+		http.HandleFunc("/mcp", server.HandleRequest)
+		if err := http.ListenAndServe(":9000", nil); err != nil {
+			log.Error("MCP server error", "error", err)
+		}
+	}()
+}

@@ -1,0 +1,35 @@
+package routes
+
+import (
+	"encoding/json"
+	"net/http"
+	"runtime"
+
+	"{{.ModulePath}}/internal/sample"
+)
+
+func RegisterRoutes(mux *http.ServeMux) {
+	mux.HandleFunc("GET /health", healthHandler)
+	mux.HandleFunc("GET /metrics", metricsHandler)
+
+	sampleHandler := sample.NewHandler(sample.NewService(sample.NewStorage()))
+	mux.HandleFunc("GET /api/samples", sampleHandler.List)
+	mux.HandleFunc("POST /api/samples", sampleHandler.Create)
+	mux.HandleFunc("GET /api/samples/{id}", sampleHandler.Get)
+}
+
+func healthHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
+}
+
+func metricsHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	var m runtime.MemStats
+	runtime.ReadMemStats(&m)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"goroutines": runtime.NumGoroutine(),
+		"alloc_mb":   m.Alloc / 1024 / 1024,
+	})
+}

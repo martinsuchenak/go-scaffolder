@@ -1,0 +1,37 @@
+package valkey
+
+import (
+	"fmt"
+
+	"github.com/paularlott/logger"
+	valkeygo "github.com/valkey-io/valkey-go"
+
+	"{{.ModulePath}}/internal/resolve"
+)
+
+type Client struct {
+	vk  valkeygo.Client
+	log logger.Logger
+}
+
+func NewClient(log logger.Logger, host string, port int, password string) (*Client, error) {
+	resolved, err := resolve.LookupSRV(host, uint16(port))
+	if err != nil {
+		return nil, fmt.Errorf("resolving valkey host: %w", err)
+	}
+
+	vk, err := valkeygo.NewClient(valkeygo.ClientOption{
+		InitAddress: []string{fmt.Sprintf("%s:%d", resolved.Host, resolved.Port)},
+		Password:    password,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("connecting to valkey: %w", err)
+	}
+
+	log.Info("connected to valkey", "host", resolved.Host, "port", resolved.Port)
+	return &Client{vk: vk, log: log}, nil
+}
+
+func (c *Client) Close() {
+	c.vk.Close()
+}

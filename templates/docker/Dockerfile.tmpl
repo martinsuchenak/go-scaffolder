@@ -1,0 +1,30 @@
+{{- if .Features.UI}}
+# Frontend build stage
+FROM oven/bun:latest AS frontend
+WORKDIR /app/web
+COPY web/package.json web/bun.lockb* ./
+RUN bun install
+COPY web/ .
+RUN bun run build
+{{- end}}
+
+# Go build stage
+FROM golang:1.26-alpine AS builder
+WORKDIR /app
+COPY go.mod go.sum ./
+RUN go mod download
+COPY . .
+{{- if .Features.UI}}
+COPY --from=frontend /app/web/dist ./web/dist
+{{- end}}
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /app/bin/{{.AppName}} .
+
+# Runtime stage
+FROM alpine:latest
+RUN apk --no-cache add ca-certificates
+WORKDIR /app
+COPY --from=builder /app/bin/{{.AppName}} .
+COPY --from=builder /app/{{.AppName}}-config.toml .
+EXPOSE 8080
+ENTRYPOINT ["./{{.AppName}}"]
+CMD ["serve"]

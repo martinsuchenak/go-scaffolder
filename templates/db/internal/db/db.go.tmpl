@@ -1,0 +1,65 @@
+package db
+
+import (
+	"database/sql"
+	"embed"
+	"fmt"
+
+	"github.com/paularlott/logger"
+{{- if eq (toString .DBType) "postgresql"}}
+	_ "github.com/lib/pq"
+{{- end}}
+{{- if eq (toString .DBType) "mysql"}}
+	_ "github.com/go-sql-driver/mysql"
+{{- end}}
+{{- if eq (toString .DBType) "sqlite"}}
+	_ "modernc.org/sqlite"
+{{- end}}
+
+	"{{.ModulePath}}/internal/resolve"
+)
+
+//go:embed schema.sql
+var schemaFS embed.FS
+
+func Connect(log logger.Logger, host string, port int, user, password, dbName string) (*sql.DB, error) {
+	resolved, err := resolve.LookupSRV(host, uint16(port))
+	if err != nil {
+		return nil, fmt.Errorf("resolving host: %w", err)
+	}
+
+{{- if eq (toString .DBType) "postgresql"}}
+	dsn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable",
+		resolved.Host, resolved.Port, user, password, dbName)
+	db, err := sql.Open("postgres", dsn)
+{{- end}}
+{{- if eq (toString .DBType) "mysql"}}
+	dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?parseTime=true",
+		user, password, resolved.Host, resolved.Port, dbName)
+	db, err := sql.Open("mysql", dsn)
+{{- end}}
+{{- if eq (toString .DBType) "sqlite"}}
+	db, err := sql.Open("sqlite", dbName)
+{{- end}}
+	if err != nil {
+		return nil, fmt.Errorf("opening database: %w", err)
+	}
+
+	if err := db.Ping(); err != nil {
+		return nil, fmt.Errorf("pinging database: %w", err)
+	}
+
+	log.Info("connected to database", "host", resolved.Host, "port", resolved.Port)
+	return db, nil
+}
+
+func RunMigrations(db *sql.DB) error {
+	schema, err := schemaFS.ReadFile("schema.sql")
+	if err != nil {
+		return fmt.Errorf("reading schema: %w", err)
+	}
+	if _, err := db.Exec(string(schema)); err != nil {
+		return fmt.Errorf("executing schema: %w", err)
+	}
+	return nil
+}

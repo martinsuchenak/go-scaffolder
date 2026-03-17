@@ -1,0 +1,11 @@
+package cmd
+
+import "github.com/paularlott/cli"
+
+func Commands() []*cli.Command {
+	return []*cli.Command{
+		serveCmd(),
+		initCmd(),
+		completionCmd(),
+	}
+}
