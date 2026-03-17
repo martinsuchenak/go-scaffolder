@@ -20,6 +20,14 @@ A CLI tool that generates fully functional Go microservice projects. Ships as a 
 
 ## Installation
 
+### Homebrew
+
+```sh
+brew install martinsuchenak/tap/go-scaffolder
+```
+
+### From source
+
 ```sh
 git clone <repo-url>
 cd go-scaffolder
