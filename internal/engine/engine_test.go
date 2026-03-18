@@ -73,21 +73,6 @@ func TestProperty3_FeatureConditionalFileInclusion(t *testing.T) {
 				t.Fatalf("expected file %q to NOT be included", outputPath)
 			}
 		}
-
-		hasResolve := false
-		for path := range files {
-			if strings.Contains(path, "internal/resolve/") {
-				hasResolve = true
-				break
-			}
-		}
-		needsSRV := cfg.Features.NeedsSRVResolve()
-		if needsSRV && !hasResolve {
-			t.Fatal("internal/resolve/ should be present when NeedsSRVResolve is true")
-		}
-		if !needsSRV && hasResolve {
-			t.Fatal("internal/resolve/ should NOT be present when NeedsSRVResolve is false")
-		}
 	})
 }
 
@@ -567,8 +552,9 @@ func TestProperty16_SRVResolutionUsage(t *testing.T) {
 			if !ok {
 				t.Fatal("internal/db/db.go should be present when DB enabled")
 			}
-			if !strings.Contains(string(dbGo), "resolve.LookupSRV") {
-				t.Fatal("DB init code should call resolve.LookupSRV")
+			// Check for DNS resolver initialization with logger
+			if !strings.Contains(string(dbGo), "dns.NewDNSResolver") {
+				t.Fatal("DB init code should initialize dns.NewDNSResolver with logger")
 			}
 		}
 
@@ -577,8 +563,8 @@ func TestProperty16_SRVResolutionUsage(t *testing.T) {
 			if !ok {
 				t.Fatal("internal/redis/redis.go should be present when Cache=Redis")
 			}
-			if !strings.Contains(string(redisGo), "resolve.LookupSRV") {
-				t.Fatal("Redis init code should call resolve.LookupSRV")
+			if !strings.Contains(string(redisGo), "dns.NewDNSResolver") {
+				t.Fatal("Redis init code should initialize dns.NewDNSResolver with logger")
 			}
 		}
 
@@ -587,8 +573,8 @@ func TestProperty16_SRVResolutionUsage(t *testing.T) {
 			if !ok {
 				t.Fatal("internal/valkey/valkey.go should be present when Cache=Valkey")
 			}
-			if !strings.Contains(string(valkeyGo), "resolve.LookupSRV") {
-				t.Fatal("Valkey init code should call resolve.LookupSRV")
+			if !strings.Contains(string(valkeyGo), "dns.NewDNSResolver") {
+				t.Fatal("Valkey init code should initialize dns.NewDNSResolver with logger")
 			}
 		}
 	})

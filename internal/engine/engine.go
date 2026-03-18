@@ -104,9 +104,6 @@ func (e *Engine) TemplateManifest() []TemplateEntry {
 		// Cache Valkey feature
 		{TemplatePath: "cache/valkey/internal/valkey/valkey.go.tmpl", OutputPath: "internal/valkey/valkey.go", RequiredFeatures: []string{"cache_valkey"}},
 
-		// SRV resolve (when DB, Cache, or API)
-		{TemplatePath: "resolve/internal/resolve/resolve.go.tmpl", OutputPath: "internal/resolve/resolve.go", RequiredFeatures: []string{"srv"}},
-
 		// Docker feature
 		{TemplatePath: "docker/Dockerfile.tmpl", OutputPath: "Dockerfile", RequiredFeatures: []string{"docker"}},
 
@@ -142,9 +139,6 @@ func (e *Engine) TemplateManifest() []TemplateEntry {
 		// Test file templates - Cache
 		{TemplatePath: "tests/cache/redis/internal/redis/redis_test.go.tmpl", OutputPath: "internal/redis/redis_test.go", RequiredFeatures: []string{"cache_redis"}},
 		{TemplatePath: "tests/cache/valkey/internal/valkey/valkey_test.go.tmpl", OutputPath: "internal/valkey/valkey_test.go", RequiredFeatures: []string{"cache_valkey"}},
-
-		// Test file templates - SRV resolve
-		{TemplatePath: "tests/resolve/internal/resolve/resolve_test.go.tmpl", OutputPath: "internal/resolve/resolve_test.go", RequiredFeatures: []string{"srv"}},
 	}
 }
 
@@ -330,10 +324,9 @@ func (e *Engine) EnableFeatureCacheManifest(cacheType config.CacheType) []Templa
 }
 
 func (e *Engine) EnableFeatureSRVManifest() []TemplateEntry {
-	return []TemplateEntry{
-		{TemplatePath: "resolve/internal/resolve/resolve.go.tmpl", OutputPath: "internal/resolve/resolve.go"},
-		{TemplatePath: "tests/resolve/internal/resolve/resolve_test.go.tmpl", OutputPath: "internal/resolve/resolve_test.go"},
-	}
+	// SRV resolution now uses github.com/fortix/go-libs/netx/dns
+	// No local templates needed
+	return nil
 }
 
 func (e *Engine) RenderFeatureFiles(cfg *config.ProjectConfig, entries []TemplateEntry) (map[string][]byte, error) {

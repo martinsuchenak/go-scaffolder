@@ -1,0 +1,26 @@
+# 2026/03/18 00:48:59.883844 [TestProperty16_SRVResolutionUsage] [rapid] draw config: config.ProjectConfig{AppName:"a--", OutputDir:"/tmp/test-a--", ModulePath:"a--", Features:config.FeatureSet{CLI:true, API:false, MCP:false, UI:false, DB:true, Cache:false, Docker:false, Nomad:false}, DBType:"mysql", CacheType:"", CustomTags:[]string(nil), ResourceName:""}
+# 2026/03/18 00:48:59.883979 [TestProperty16_SRVResolutionUsage] DB init code should call resolve.LookupSRV
+# 
+v0.4.8#14228811488869443576
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x1
+0x0
+0x0
+0x0
+0x0
+0x0

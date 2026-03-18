@@ -1,0 +1,26 @@
+# 2026/03/18 00:48:59.816993 [TestProperty3_FeatureConditionalFileInclusion] [rapid] draw config: config.ProjectConfig{AppName:"a--", OutputDir:"/tmp/test-a--", ModulePath:"a--", Features:config.FeatureSet{CLI:true, API:false, MCP:false, UI:false, DB:false, Cache:true, Docker:false, Nomad:false}, DBType:"", CacheType:"redis", CustomTags:[]string(nil), ResourceName:""}
+# 2026/03/18 00:48:59.817217 [TestProperty3_FeatureConditionalFileInclusion] internal/resolve/ should be present when NeedsSRVResolve is true
+# 
+v0.4.8#2182312935745723551
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x1
+0x0
+0x0
+0x0
+0x0
