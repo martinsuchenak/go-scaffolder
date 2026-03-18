@@ -60,6 +60,7 @@ func (e *Engine) TemplateManifest() []TemplateEntry {
 		// Base templates (always included)
 		{TemplatePath: "base/main.go.tmpl", OutputPath: "main.go", RequiredFeatures: nil},
 		{TemplatePath: "base/go.mod.tmpl", OutputPath: "go.mod", RequiredFeatures: nil},
+		{TemplatePath: "base/README.md.tmpl", OutputPath: "README.md", RequiredFeatures: nil},
 		{TemplatePath: "base/build/version.go.tmpl", OutputPath: "build/version.go", RequiredFeatures: nil},
 		{TemplatePath: "base/Taskfile.yml.tmpl", OutputPath: "Taskfile.yml", RequiredFeatures: nil},
 		{TemplatePath: "base/config.toml.tmpl", OutputPath: "{{.AppName}}-config.toml", RequiredFeatures: nil},

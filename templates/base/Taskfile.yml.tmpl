@@ -31,6 +31,12 @@ tasks:
     cmds:
       - go test ./... -v -count=1
 
+  clean:
+    desc: Clean build artifacts
+    cmds:
+      - rm -rf bin/
+      - go clean
+
   lint:
     desc: Run linter
     cmds:
