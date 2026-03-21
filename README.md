@@ -244,4 +244,4 @@ task clean
 
 ## License
 
-See LICENSE file.
+MIT
