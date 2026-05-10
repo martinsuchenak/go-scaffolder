@@ -101,8 +101,9 @@ Serve flags:
 3. **Feature resolution** -- CLI is always enabled; Nomad auto-includes Docker
 4. **Template rendering** -- all applicable templates are rendered to memory
 5. **File writing** -- files are written to the output directory (atomic: all or nothing)
-6. **State file** -- `.go-scaffolder.yaml` is written to record the project config for future `add` operations
-7. **Post-generation** -- `go mod tidy` resolves dependencies to latest versions
+6. **Baseline project files** -- `.gitignore` and `AGENTS.md` are generated alongside the source tree
+7. **State file** -- `.go-scaffolder.yaml` is written to record the project config for future `add` operations
+8. **Post-generation** -- `go mod tidy` resolves dependencies to latest versions
 
 If any template fails to render, no files are written. If `go mod tidy` fails, the generated files are preserved and you can run it manually.
 

@@ -59,6 +59,8 @@ func (e *Engine) TemplateManifest() []TemplateEntry {
 	return []TemplateEntry{
 		// Base templates (always included)
 		{TemplatePath: "base/main.go.tmpl", OutputPath: "main.go", RequiredFeatures: nil},
+		{TemplatePath: "base/.gitignore.tmpl", OutputPath: ".gitignore", RequiredFeatures: nil},
+		{TemplatePath: "base/AGENTS.md.tmpl", OutputPath: "AGENTS.md", RequiredFeatures: nil},
 		{TemplatePath: "base/go.mod.tmpl", OutputPath: "go.mod", RequiredFeatures: nil},
 		{TemplatePath: "base/README.md.tmpl", OutputPath: "README.md", RequiredFeatures: nil},
 		{TemplatePath: "base/build/version.go.tmpl", OutputPath: "build/version.go", RequiredFeatures: nil},

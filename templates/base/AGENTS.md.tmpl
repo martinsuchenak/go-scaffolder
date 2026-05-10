@@ -1,0 +1,54 @@
+# AGENTS
+
+## Project
+
+- Name: `{{.AppName}}`
+- Module: `{{.ModulePath}}`
+
+## Generated Structure
+
+- CLI is always enabled.
+{{- if .Features.API}}
+- API feature is enabled.
+{{- end}}
+{{- if .Features.MCP}}
+- MCP feature is enabled.
+{{- end}}
+{{- if .Features.UI}}
+- UI feature is enabled under `web/`.
+{{- end}}
+{{- if .Features.DB}}
+- DB feature is enabled with `{{.DBType}}`{{if .UseXDAL}} and `xdal`{{end}}.
+{{- end}}
+{{- if .Features.Cache}}
+- Cache feature is enabled with `{{.CacheType}}`.
+{{- end}}
+{{- if .Features.Docker}}
+- Docker support is enabled.
+{{- end}}
+{{- if .Features.Nomad}}
+- Nomad support is enabled.
+{{- end}}
+
+## Working Rules
+
+- Prefer `task build`, `task test`, and `task lint` before custom commands.
+- Keep generated layering intact: handler -> service -> storage for API code.
+- Add new CLI commands, API endpoints, or MCP tools with `go-scaffolder add` where possible.
+- Do not remove marker comments beginning with `go-scaffolder:` unless you also update the patching flow.
+
+## Common Commands
+
+```sh
+task build
+task test
+task lint
+```
+
+{{- if .Features.UI}}
+Frontend build:
+
+```sh
+task frontend-build
+```
+{{- end}}

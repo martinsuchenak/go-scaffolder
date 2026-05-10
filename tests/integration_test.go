@@ -513,4 +513,10 @@ db_type: postgresql
 	if _, err := os.Stat(filepath.Join(outputDir, "go.mod")); os.IsNotExist(err) {
 		t.Fatal("go.mod should exist in output directory")
 	}
+	if _, err := os.Stat(filepath.Join(outputDir, ".gitignore")); os.IsNotExist(err) {
+		t.Fatal(".gitignore should exist in output directory")
+	}
+	if _, err := os.Stat(filepath.Join(outputDir, "AGENTS.md")); os.IsNotExist(err) {
+		t.Fatal("AGENTS.md should exist in output directory")
+	}
 }

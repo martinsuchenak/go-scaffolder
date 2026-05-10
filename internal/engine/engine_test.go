@@ -96,6 +96,14 @@ func TestProperty4_AppNameSubstitution(t *testing.T) {
 				t.Fatalf("go.mod should contain module path with AppName %q", cfg.AppName)
 			}
 		}
+		if _, ok := files[".gitignore"]; !ok {
+			t.Fatal("expected .gitignore to be generated")
+		}
+		if agents, ok := files["AGENTS.md"]; !ok {
+			t.Fatal("expected AGENTS.md to be generated")
+		} else if !strings.Contains(string(agents), cfg.AppName) {
+			t.Fatalf("AGENTS.md should contain AppName %q", cfg.AppName)
+		}
 
 		// config file name
 		configKey := cfg.AppName + "-config.toml"

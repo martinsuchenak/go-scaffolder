@@ -31,7 +31,7 @@ Property-based tests use [rapid](https://github.com/flyingmutant/rapid) to verif
 | 1. Feature resolution invariants | CLI always true; Nomad implies Docker |
 | 2. App name validation | Empty/whitespace names are rejected |
 | 3. Feature-conditional file inclusion | Output files match exactly the enabled feature guards |
-| 4. AppName substitution | AppName appears in go.mod, config file, openapi.yaml, nomad job |
+| 4. AppName substitution | AppName appears in go.mod, config file, openapi.yaml, nomad job, and AGENTS.md |
 | 5. Source import dependencies | Correct library imports for enabled features |
 | 6. No hardcoded versions | go.mod contains no version strings |
 | 7. Config TOML sections | Correct sections present/absent based on features |

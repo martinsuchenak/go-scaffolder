@@ -11,6 +11,7 @@ A CLI tool that generates fully functional Go microservice projects. Ships as a 
 - **Cache support** — Redis or Valkey with client initialization
 - **DNS SRV resolution** — auto-generated `internal/resolve/` package when networking features are enabled
 - **Test file generation** — every source file gets a corresponding `_test.go`
+- **Project hygiene files** — generates a standard `.gitignore` and `AGENTS.md`
 - **Post-generation** — runs `go mod tidy` to resolve all dependencies
 
 ## Requirements
@@ -183,6 +184,8 @@ If neither is provided, the server looks for `.go-scaffolder.yaml` in its workin
 ```
 my-service/
 ├── main.go                  # CLI entry point using paularlott/cli
+├── .gitignore               # Standard ignore rules for Go and optional UI assets
+├── AGENTS.md                # Project guidance for future coding agents and contributors
 ├── go.mod
 ├── build/version.go         # Build version/date injected via ldflags
 ├── Taskfile.yml             # Build, test, lint tasks

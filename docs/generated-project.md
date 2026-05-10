@@ -9,6 +9,8 @@ A fully-featured project (all features enabled) looks like:
 ```
 my-service/
 ├── main.go                         # Entry point, CLI setup
+├── .gitignore                      # Standard ignore rules
+├── AGENTS.md                       # Project guidance for future agents/contributors
 ├── go.mod                          # Go module (dependencies resolved by go mod tidy)
 ├── Taskfile.yml                    # Build, test, lint tasks
 ├── my-service-config.toml          # Application configuration
