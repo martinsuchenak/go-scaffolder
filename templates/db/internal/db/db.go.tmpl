@@ -19,6 +19,18 @@ import (
 {{- if eq (toString .DBType) "sqlite"}}
 	_ "modernc.org/sqlite"
 {{- end}}
+{{- if .UseXDAL}}
+{{- if eq (toString .DBType) "postgresql"}}
+	xdaldb "github.com/martinsuchenak/xdal/pkg/postgres"
+{{- end}}
+{{- if eq (toString .DBType) "mysql"}}
+	xdaldb "github.com/martinsuchenak/xdal/pkg/mysql"
+{{- end}}
+{{- if eq (toString .DBType) "sqlite"}}
+	xdaldb "github.com/martinsuchenak/xdal/pkg/sqlite"
+{{- end}}
+	"github.com/martinsuchenak/xdal/pkg/xdal"
+{{- end}}
 )
 
 //go:embed schema.sql
@@ -28,6 +40,13 @@ type DBAddr struct {
 	Host string
 	Port int
 }
+
+{{- if .UseXDAL}}
+type Connection struct {
+	SQL *sql.DB
+	DB  xdal.DBInterface
+}
+{{- end}}
 
 // ResolveHost resolves a host string to a database address.
 // If the host starts with "_", it's treated as an SRV name and resolved via DNS.
@@ -61,7 +80,11 @@ func ResolveHost(log logger.Logger, host string) (*DBAddr, error) {
 	return &DBAddr{Host: h, Port: port}, nil
 }
 
+{{- if .UseXDAL}}
+func Connect(log logger.Logger, host string, user, password, dbName string) (*Connection, error) {
+{{- else}}
 func Connect(log logger.Logger, host string, user, password, dbName string) (*sql.DB, error) {
+{{- end}}
 	addr, err := ResolveHost(log, host)
 	if err != nil {
 		return nil, fmt.Errorf("resolving host: %w", err)
@@ -89,8 +112,21 @@ func Connect(log logger.Logger, host string, user, password, dbName string) (*sq
 	}
 
 	log.Info("connected to database", "host", addr.Host, "port", addr.Port)
+{{- if .UseXDAL}}
+	return &Connection{
+		SQL: db,
+		DB:  wrapXDALDB(db, log),
+	}, nil
+{{- else}}
 	return db, nil
+{{- end}}
 }
+
+{{- if .UseXDAL}}
+func wrapXDALDB(sqlDB *sql.DB, log logger.Logger) xdal.DBInterface {
+	return xdaldb.New{{- if eq (toString .DBType) "postgresql"}}PostgresDB{{- end}}{{- if eq (toString .DBType) "mysql"}}MySQLDB{{- end}}{{- if eq (toString .DBType) "sqlite"}}SQLiteDB{{- end}}(sqlDB, log)
+}
+{{- end}}
 
 func RunMigrations(db *sql.DB) error {
 	schema, err := schemaFS.ReadFile("schema.sql")

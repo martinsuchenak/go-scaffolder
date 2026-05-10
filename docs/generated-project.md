@@ -56,7 +56,7 @@ my-service/
 │   │   ├── service_test.go
 │   │   └── storage_test.go
 │   ├── db/
-│   │   ├── db.go                   # Database connection
+│   │   ├── db.go                   # Database connection, optionally exposing xdal.DBInterface
 │   │   ├── schema.sql              # Database schema
 │   │   └── db_test.go
 │   ├── redis/                      # or valkey/
@@ -145,6 +145,11 @@ The generated API code follows a **Handler -> Service -> Storage** layering patt
 - **Handler** -- HTTP request/response handling, input validation, calls service
 - **Service** -- business logic, orchestration, calls storage
 - **Storage** -- data access (in-memory by default, replace with DB calls)
+
+If DB is scaffolded with `use_xdal`, the generated `internal/db` package returns a `Connection` wrapper with:
+
+- `SQL` for migrations and low-level `database/sql` usage
+- `DB` for `xdal` query-builder and portable query execution
 
 ## Self-Registration Pattern
 

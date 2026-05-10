@@ -6,8 +6,8 @@ A CLI tool that generates fully functional Go microservice projects. Ships as a 
 
 - **Interactive mode** — prompts for app name, output directory, and feature selection
 - **Config file mode** — reads all parameters from a YAML file (`--config`) for scripted/CI usage
-- **Selectable features** — CLI, API, MCP, UI, DB, Cache, Docker, Nomad
-- **Database support** — PostgreSQL, MySQL, SQLite with driver wiring and schema generation
+- **Selectable features** — CLI, API, MCP, UI, DB, Cache, Docker, Nomad, plus an `all` shortcut in interactive/config flows
+- **Database support** — PostgreSQL, MySQL, SQLite with optional `xdal` abstraction for swappable DB backends
 - **Cache support** — Redis or Valkey with client initialization
 - **DNS SRV resolution** — auto-generated `internal/resolve/` package when networking features are enabled
 - **Test file generation** — every source file gets a corresponding `_test.go`
@@ -48,8 +48,8 @@ You will be prompted for:
 1. App name
 2. Module path (e.g. `github.com/yourorg/my-service`, defaults to app name)
 3. Output directory
-4. Features (API, MCP, UI, DB, Cache, Docker, Nomad)
-5. DB type (if DB selected)
+4. Features (`All`, API, MCP, UI, DB, Cache, Docker, Nomad)
+5. DB type and optional `xdal` abstraction (if DB selected)
 6. Cache type (if Cache selected)
 
 ### Config file mode
@@ -70,6 +70,7 @@ features:
   - cache
   - docker
 db_type: postgresql
+use_xdal: true
 cache_type: redis
 ```
 
@@ -113,7 +114,7 @@ Features can be enabled after initial scaffolding:
 go-scaffolder add feature
 
 # Non-interactive
-go-scaffolder add feature --db-type postgresql
+go-scaffolder add feature --db-type postgresql --use-xdal
 go-scaffolder add feature --cache-type redis
 ```
 
@@ -198,7 +199,7 @@ my-service/
 │   ├── auth/                # Auth middleware (when API enabled)
 │   ├── ctxkeys/             # Typed context keys (when API enabled)
 │   ├── sample/              # Sample Handler→Service→Storage (when API enabled)
-│   ├── db/                  # DB init + schema (when DB enabled)
+│   ├── db/                  # DB init + schema, optionally wrapped with xdal (when DB enabled)
 │   ├── redis/               # Redis client (when Cache=Redis)
 │   ├── valkey/              # Valkey client (when Cache=Valkey)
 │   └── resolve/             # DNS SRV resolution (when DB, Cache, or API enabled)

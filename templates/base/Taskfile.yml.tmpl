@@ -6,6 +6,8 @@ vars:
     sh: git describe --tags --always --dirty 2>/dev/null || echo "dev"
   DATE:
     sh: date -u '+%Y-%m-%dT%H:%M:%SZ'
+  GO_CACHE_DIR:
+    sh: pwd
   LDFLAGS: -s -w -X {{.ModulePath}}/build.Version={{`{{.VERSION}}`}} -X {{.ModulePath}}/build.Date={{`{{.DATE}}`}}
 
 tasks:
@@ -40,7 +42,7 @@ tasks:
   lint:
     desc: Run linter
     cmds:
-      - golangci-lint run ./...
+      - GOCACHE={{`{{.GO_CACHE_DIR}}`}}/.cache/go-build golangci-lint run .
 {{- if .Features.UI}}
 
   frontend-build:

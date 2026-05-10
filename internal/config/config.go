@@ -20,6 +20,8 @@ const (
 	CacheValkey CacheType = "valkey"
 )
 
+var SelectableFeatures = []string{"api", "mcp", "ui", "db", "cache", "docker", "nomad"}
+
 type FeatureSet struct {
 	CLI    bool
 	API    bool
@@ -37,6 +39,7 @@ type ProjectConfig struct {
 	ModulePath   string
 	Features     FeatureSet
 	DBType       DBType
+	UseXDAL      bool
 	CacheType    CacheType
 	CustomTags   []string
 	ResourceName string
@@ -75,6 +78,45 @@ func ResolveFeatures(fs *FeatureSet) {
 	}
 }
 
+func EnableFeature(fs *FeatureSet, name string) bool {
+	switch strings.ToLower(strings.TrimSpace(name)) {
+	case "api":
+		fs.API = true
+	case "mcp":
+		fs.MCP = true
+	case "ui":
+		fs.UI = true
+	case "db":
+		fs.DB = true
+	case "cache":
+		fs.Cache = true
+	case "docker":
+		fs.Docker = true
+	case "nomad":
+		fs.Nomad = true
+	default:
+		return false
+	}
+	return true
+}
+
+func ExpandFeatureNames(names []string) []string {
+	var expanded []string
+	hasAll := false
+	for _, name := range names {
+		trimmed := strings.TrimSpace(name)
+		if strings.EqualFold(trimmed, "all") {
+			hasAll = true
+			continue
+		}
+		expanded = append(expanded, trimmed)
+	}
+	if hasAll {
+		return append(append([]string(nil), SelectableFeatures...), expanded...)
+	}
+	return expanded
+}
+
 func (pc *ProjectConfig) Validate() error {
 	var errs []string
 
@@ -92,6 +134,8 @@ func (pc *ProjectConfig) Validate() error {
 		default:
 			errs = append(errs, fmt.Sprintf("invalid db_type %q: must be mysql, postgresql, or sqlite", pc.DBType))
 		}
+	} else if pc.UseXDAL {
+		errs = append(errs, "use_xdal requires the db feature to be enabled")
 	}
 
 	if pc.Features.Cache {

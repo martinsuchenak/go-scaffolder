@@ -124,8 +124,40 @@ func ValidateResourceName(s string) error {
 }
 
 var FeatureOptions = []string{"API", "MCP", "UI", "DB", "Cache", "Docker", "Nomad"}
+var FeatureSelectionOptions = []string{"All", "API", "MCP", "UI", "DB", "Cache", "Docker", "Nomad"}
 var DBTypeOptions = []string{"mysql", "postgresql", "sqlite"}
 var CacheTypeOptions = []string{"redis", "valkey"}
+
+func normalizeFeatureSelections(selections []string) []string {
+	for _, selection := range selections {
+		if strings.EqualFold(selection, "all") {
+			return append([]string(nil), FeatureOptions...)
+		}
+	}
+	return selections
+}
+
+func CollectDBOptions(p Prompter) (config.DBType, bool, error) {
+	dbStr, err := p.AskSelect("Select database type", DBTypeOptions)
+	if err != nil {
+		return "", false, err
+	}
+
+	planToSwap, err := p.Confirm("Do you plan to swap the database later?")
+	if err != nil {
+		return "", false, err
+	}
+	if !planToSwap {
+		return config.DBType(dbStr), false, nil
+	}
+
+	useXDAL, err := p.Confirm("Use xdal for the database abstraction layer?")
+	if err != nil {
+		return "", false, err
+	}
+
+	return config.DBType(dbStr), useXDAL, nil
+}
 
 func CollectConfig(p Prompter) (*config.ProjectConfig, error) {
 	appName, err := p.AskString("App Name", ValidateAppName)
@@ -146,40 +178,26 @@ func CollectConfig(p Prompter) (*config.ProjectConfig, error) {
 		return nil, err
 	}
 
-	features, err := p.AskMultiSelect("Select features", FeatureOptions)
+	features, err := p.AskMultiSelect("Select features", FeatureSelectionOptions)
 	if err != nil {
 		return nil, err
 	}
 
 	fs := config.FeatureSet{}
-	for _, f := range features {
-		switch strings.ToLower(f) {
-		case "api":
-			fs.API = true
-		case "mcp":
-			fs.MCP = true
-		case "ui":
-			fs.UI = true
-		case "db":
-			fs.DB = true
-		case "cache":
-			fs.Cache = true
-		case "docker":
-			fs.Docker = true
-		case "nomad":
-			fs.Nomad = true
-		}
+	for _, f := range normalizeFeatureSelections(features) {
+		config.EnableFeature(&fs, f)
 	}
 
 	config.ResolveFeatures(&fs)
 
 	var dbType config.DBType
+	var useXDAL bool
 	if fs.DB {
-		dbStr, err := p.AskSelect("Select database type", DBTypeOptions)
-		if err != nil {
-			return nil, err
+		var dbErr error
+		dbType, useXDAL, dbErr = CollectDBOptions(p)
+		if dbErr != nil {
+			return nil, dbErr
 		}
-		dbType = config.DBType(dbStr)
 	}
 
 	var cacheType config.CacheType
@@ -197,6 +215,7 @@ func CollectConfig(p Prompter) (*config.ProjectConfig, error) {
 		ModulePath: modulePath,
 		Features:   fs,
 		DBType:     dbType,
+		UseXDAL:    useXDAL,
 		CacheType:  cacheType,
 	}
 

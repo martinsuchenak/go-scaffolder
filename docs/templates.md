@@ -102,6 +102,7 @@ Every template receives a `ProjectConfig` struct as its data context:
 | `.Features.Docker` | `bool` | Docker feature enabled |
 | `.Features.Nomad` | `bool` | Nomad feature enabled |
 | `.DBType` | `string` | `"mysql"`, `"postgresql"`, or `"sqlite"` |
+| `.UseXDAL` | `bool` | Whether the scaffold should wrap the DB layer with `xdal` |
 | `.CacheType` | `string` | `"redis"` or `"valkey"` |
 | `.CustomTags` | `[]string` | Custom feature tags from config |
 | `.ResourceName` | `string` | Name of the resource being added (only in `add` templates) |

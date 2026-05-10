@@ -29,8 +29,10 @@ func genValidProjectConfig() *rapid.Generator[ProjectConfig] {
 		ResolveFeatures(&fs)
 
 		var dbType DBType
+		var useXDAL bool
 		if fs.DB {
 			dbType = rapid.SampledFrom([]DBType{DBMySQL, DBPostgreSQL, DBSQLite}).Draw(t, "DBType")
+			useXDAL = rapid.Bool().Draw(t, "UseXDAL")
 		}
 
 		var cacheType CacheType
@@ -44,6 +46,7 @@ func genValidProjectConfig() *rapid.Generator[ProjectConfig] {
 			ModulePath: appName,
 			Features:   fs,
 			DBType:     dbType,
+			UseXDAL:    useXDAL,
 			CacheType:  cacheType,
 		}
 	})
@@ -133,10 +136,10 @@ func TestValidate(t *testing.T) {
 		{
 			name: "DB enabled without valid type",
 			pc: ProjectConfig{
-				AppName:  "myapp",
+				AppName:   "myapp",
 				OutputDir: "/tmp/out",
-				Features: FeatureSet{DB: true},
-				DBType:   "invalid",
+				Features:  FeatureSet{DB: true},
+				DBType:    "invalid",
 			},
 			wantErr: true,
 			errMsg:  "invalid db_type",
@@ -153,12 +156,23 @@ func TestValidate(t *testing.T) {
 			errMsg:  "invalid cache_type",
 		},
 		{
+			name: "xdal without db",
+			pc: ProjectConfig{
+				AppName:   "myapp",
+				OutputDir: "/tmp/out",
+				UseXDAL:   true,
+			},
+			wantErr: true,
+			errMsg:  "use_xdal requires the db feature",
+		},
+		{
 			name: "valid with DB postgresql",
 			pc: ProjectConfig{
-				AppName:  "myapp",
+				AppName:   "myapp",
 				OutputDir: "/tmp/out",
-				Features: FeatureSet{DB: true},
-				DBType:   DBPostgreSQL,
+				Features:  FeatureSet{DB: true},
+				DBType:    DBPostgreSQL,
+				UseXDAL:   true,
 			},
 			wantErr: false,
 		},

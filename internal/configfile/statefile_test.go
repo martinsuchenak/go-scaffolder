@@ -22,7 +22,8 @@ func TestWriteAndLoadStateFile(t *testing.T) {
 			DB:     true,
 			Docker: true,
 		},
-		DBType: config.DBPostgreSQL,
+		DBType:  config.DBPostgreSQL,
+		UseXDAL: true,
 	}
 
 	if err := WriteStateFile(path, cfg); err != nil {
@@ -51,6 +52,9 @@ func TestWriteAndLoadStateFile(t *testing.T) {
 	}
 	if loaded.DBType != config.DBPostgreSQL {
 		t.Errorf("DBType: got %q, want %q", loaded.DBType, config.DBPostgreSQL)
+	}
+	if !loaded.UseXDAL {
+		t.Error("UseXDAL should be enabled")
 	}
 	if loaded.OutputDir != "." {
 		t.Errorf("OutputDir: got %q, want %q", loaded.OutputDir, ".")
@@ -83,6 +87,7 @@ func TestWriteStateFileAllFeatures(t *testing.T) {
 			Nomad:  true,
 		},
 		DBType:    config.DBMySQL,
+		UseXDAL:   true,
 		CacheType: config.CacheRedis,
 	}
 
@@ -110,6 +115,7 @@ features:
   - api
   - db
 db_type: postgresql
+use_xdal: true
 `
 	cfg, err := ParseStateContent(content)
 	if err != nil {
@@ -130,6 +136,9 @@ db_type: postgresql
 	}
 	if cfg.DBType != config.DBPostgreSQL {
 		t.Errorf("DBType: got %q, want %q", cfg.DBType, config.DBPostgreSQL)
+	}
+	if !cfg.UseXDAL {
+		t.Error("UseXDAL should be enabled")
 	}
 	if cfg.OutputDir != "." {
 		t.Errorf("OutputDir: got %q, want %q", cfg.OutputDir, ".")

@@ -2,6 +2,8 @@ version: '3'
 
 vars:
   BINARY: go-scaffolder
+  ROOT_DIR:
+    sh: pwd
 
 tasks:
   default:
@@ -17,22 +19,22 @@ tasks:
   test:
     desc: Run unit and property tests
     cmds:
-      - go test ./internal/... -count=1
+      - GOMODCACHE={{.ROOT_DIR}}/.modcache GOCACHE={{.ROOT_DIR}}/.cache/go-build GOSUMDB=off go test ./internal/... -count=1
 
   test-integration:
     desc: Run integration tests (scaffolds real projects and compiles them)
     cmds:
-      - go test -tags integration ./tests/ -count=1 -timeout 300s
+      - GOMODCACHE={{.ROOT_DIR}}/.modcache GOCACHE={{.ROOT_DIR}}/.cache/go-build GOSUMDB=off go test -tags integration ./tests/ -count=1 -timeout 300s
 
   test-all:
     desc: Run all tests (unit + integration)
     cmds:
-      - go test -tags integration ./... -count=1 -timeout 300s
+      - GOMODCACHE={{.ROOT_DIR}}/.modcache GOCACHE={{.ROOT_DIR}}/.cache/go-build GOSUMDB=off go test -tags integration ./... -count=1 -timeout 300s
 
   test-verbose:
     desc: Run all tests with verbose output
     cmds:
-      - go test -tags integration ./... -v -count=1 -timeout 300s
+      - GOMODCACHE={{.ROOT_DIR}}/.modcache GOCACHE={{.ROOT_DIR}}/.cache/go-build GOSUMDB=off go test -tags integration ./... -v -count=1 -timeout 300s
 
   lint:
     desc: Run go vet

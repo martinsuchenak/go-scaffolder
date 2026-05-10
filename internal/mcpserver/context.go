@@ -42,6 +42,7 @@ func GenerateContext(cfg *config.ProjectConfig, projectDir string) string {
 
 	if cfg.Features.DB {
 		sb.WriteString(fmt.Sprintf("\n**Database Type**: %s\n", cfg.DBType))
+		sb.WriteString(fmt.Sprintf("**Use XDAL**: %t\n", cfg.UseXDAL))
 	}
 	if cfg.Features.Cache {
 		sb.WriteString(fmt.Sprintf("\n**Cache Type**: %s\n", cfg.CacheType))

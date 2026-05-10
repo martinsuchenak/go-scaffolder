@@ -18,9 +18,11 @@ features:
   - db
   - cache
   - docker
+  # or just: [all]
 
 # Required when "db" is in features
 db_type: postgresql    # mysql | postgresql | sqlite
+use_xdal: true         # optional, only meaningful with db
 
 # Required when "cache" is in features
 cache_type: redis      # redis | valkey
@@ -35,6 +37,7 @@ cache_type: redis      # redis | valkey
 | `module_path` | string | No | Go module path (e.g. `github.com/yourorg/my-service`). Defaults to `app_name` |
 | `features` | list of strings | Yes | Features to enable (see below) |
 | `db_type` | string | When DB selected | Database engine: `mysql`, `postgresql`, or `sqlite` |
+| `use_xdal` | bool | No | Generate the DB layer on top of `github.com/martinsuchenak/xdal` |
 | `cache_type` | string | When Cache selected | Cache engine: `redis` or `valkey` |
 
 ## Recognized Feature Names
@@ -48,6 +51,7 @@ cache_type: redis      # redis | valkey
 | `cache` | Cache integration (Redis or Valkey) |
 | `docker` | Dockerfile generation |
 | `nomad` | Nomad job definition (auto-includes Docker) |
+| `all` | Enables every built-in feature above |
 
 Any feature name not in the list above is treated as a **custom tag** and can be used to activate [external templates](extending.md).
 
@@ -58,6 +62,7 @@ The same validation rules apply in both interactive and config file modes:
 - `app_name` must not be empty or whitespace-only
 - `output_dir` must not be empty
 - `db_type` must be valid when DB is selected
+- `use_xdal` may only be set when DB is selected
 - `cache_type` must be valid when Cache is selected
 - Nomad automatically includes Docker
 
@@ -80,14 +85,9 @@ app_name: user-service
 module_path: github.com/yourorg/user-service
 output_dir: ./user-service
 features:
-  - api
-  - mcp
-  - ui
-  - db
-  - cache
-  - docker
-  - nomad
+  - all
 db_type: postgresql
+use_xdal: true
 cache_type: redis
 ```
 

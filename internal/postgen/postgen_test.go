@@ -11,7 +11,7 @@ func TestRunGoModTidy(t *testing.T) {
 
 	gomod := `module testmod
 
-go 1.26
+go 1.26.3
 `
 	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte(gomod), 0644); err != nil {
 		t.Fatal(err)

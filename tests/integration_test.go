@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/martinsuchenak/go-scaffolder/internal/config"
@@ -35,6 +36,15 @@ func scaffoldProject(t *testing.T, cfg *config.ProjectConfig) string {
 	}
 
 	return outputDir
+}
+
+func repoRoot(t *testing.T) string {
+	t.Helper()
+	_, filename, _, ok := runtime.Caller(0)
+	if !ok {
+		t.Fatal("failed to resolve test file path")
+	}
+	return filepath.Dir(filepath.Dir(filename))
 }
 
 func runInDir(t *testing.T, dir string, name string, args ...string) string {
@@ -83,6 +93,7 @@ func TestIntegration_AllFeatures(t *testing.T) {
 			Nomad:  true,
 		},
 		DBType:    config.DBPostgreSQL,
+		UseXDAL:   true,
 		CacheType: config.CacheRedis,
 	}
 
@@ -406,6 +417,7 @@ func TestIntegration_EnableDB(t *testing.T) {
 
 	cfg.Features.DB = true
 	cfg.DBType = config.DBPostgreSQL
+	cfg.UseXDAL = true
 	enableFeature(t, dir, "db", cfg)
 
 	runInDir(t, dir, "go", "mod", "tidy")
@@ -483,7 +495,7 @@ db_type: postgresql
 
 	binary := filepath.Join(dir, "scaffolder")
 	buildCmd := exec.Command("go", "build", "-o", binary, ".")
-	buildCmd.Dir = "/Users/martinsuchenak/Devel/projects/new/go-scaffolder"
+	buildCmd.Dir = repoRoot(t)
 	if output, err := buildCmd.CombinedOutput(); err != nil {
 		t.Fatalf("build error: %v\n%s", err, output)
 	}

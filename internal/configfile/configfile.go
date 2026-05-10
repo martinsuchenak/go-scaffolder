@@ -16,6 +16,7 @@ type ScaffoldConfig struct {
 	ModulePath string   `yaml:"module_path"`
 	Features   []string `yaml:"features"`
 	DBType     string   `yaml:"db_type"`
+	UseXDAL    bool     `yaml:"use_xdal"`
 	CacheType  string   `yaml:"cache_type"`
 }
 
@@ -47,31 +48,17 @@ func (sc *ScaffoldConfig) ToProjectConfig() (*config.ProjectConfig, error) {
 
 	fs := config.FeatureSet{}
 	var customTags []string
-	knownFeatures := map[string]bool{
-		"api": true, "mcp": true, "ui": true, "db": true,
-		"cache": true, "docker": true, "nomad": true,
+	knownFeatures := make(map[string]bool, len(config.SelectableFeatures))
+	for _, feature := range config.SelectableFeatures {
+		knownFeatures[feature] = true
 	}
-	for _, f := range sc.Features {
+	for _, f := range config.ExpandFeatureNames(sc.Features) {
 		lower := strings.ToLower(f)
-		switch lower {
-		case "api":
-			fs.API = true
-		case "mcp":
-			fs.MCP = true
-		case "ui":
-			fs.UI = true
-		case "db":
-			fs.DB = true
-		case "cache":
-			fs.Cache = true
-		case "docker":
-			fs.Docker = true
-		case "nomad":
-			fs.Nomad = true
-		default:
-			if !knownFeatures[lower] {
-				customTags = append(customTags, lower)
-			}
+		if config.EnableFeature(&fs, lower) {
+			continue
+		}
+		if !knownFeatures[lower] {
+			customTags = append(customTags, lower)
 		}
 	}
 
@@ -88,6 +75,7 @@ func (sc *ScaffoldConfig) ToProjectConfig() (*config.ProjectConfig, error) {
 		ModulePath: modulePath,
 		Features:   fs,
 		DBType:     config.DBType(sc.DBType),
+		UseXDAL:    sc.UseXDAL,
 		CacheType:  config.CacheType(sc.CacheType),
 		CustomTags: customTags,
 	}

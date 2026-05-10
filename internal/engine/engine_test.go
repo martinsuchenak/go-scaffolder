@@ -26,8 +26,10 @@ func genValidProjectConfig() *rapid.Generator[config.ProjectConfig] {
 		config.ResolveFeatures(&fs)
 
 		var dbType config.DBType
+		var useXDAL bool
 		if fs.DB {
 			dbType = rapid.SampledFrom([]config.DBType{config.DBMySQL, config.DBPostgreSQL, config.DBSQLite}).Draw(t, "DBType")
+			useXDAL = rapid.Bool().Draw(t, "UseXDAL")
 		}
 		var cacheType config.CacheType
 		if fs.Cache {
@@ -40,6 +42,7 @@ func genValidProjectConfig() *rapid.Generator[config.ProjectConfig] {
 			ModulePath: appName,
 			Features:   fs,
 			DBType:     dbType,
+			UseXDAL:    useXDAL,
 			CacheType:  cacheType,
 		}
 	})
@@ -146,6 +149,9 @@ func TestProperty5_SourceImportDependencies(t *testing.T) {
 			}
 		}
 		if cfg.Features.DB {
+			if cfg.UseXDAL && !strings.Contains(allContent, "martinsuchenak/xdal") {
+				t.Fatal("source should import xdal when UseXDAL is enabled")
+			}
 			switch cfg.DBType {
 			case config.DBPostgreSQL:
 				if !strings.Contains(allContent, "lib/pq") {

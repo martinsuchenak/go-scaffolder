@@ -79,10 +79,12 @@ Database persistence layer with driver selection.
 
 Generated files:
 
-- `internal/db/db.go` -- connection setup with SRV resolution
+- `internal/db/db.go` -- connection setup with SRV resolution, optionally wrapped with `xdal`
 - `internal/db/schema.sql` -- sample schema with UUIDv7 primary keys
 
 Config additions: `[database]` section.
+
+When DB is selected interactively, the scaffolder asks whether the database may need to be swapped later. If yes, it can generate the DB layer on top of [`github.com/martinsuchenak/xdal`](https://github.com/martinsuchenak/xdal), exposing both the raw `*sql.DB` connection and an `xdal.DBInterface`.
 
 ## Cache
 

@@ -18,6 +18,7 @@ func TestGenerateContext_BasicOutput(t *testing.T) {
 			MCP: true,
 		},
 		DBType:    config.DBPostgreSQL,
+		UseXDAL:   true,
 		CacheType: config.CacheRedis,
 	}
 
@@ -69,6 +70,7 @@ func TestGenerateContext_AllFeaturesEnabled(t *testing.T) {
 			DB: true, Cache: true, Docker: true, Nomad: true,
 		},
 		DBType:    config.DBPostgreSQL,
+		UseXDAL:   true,
 		CacheType: config.CacheRedis,
 	}
 
@@ -79,6 +81,9 @@ func TestGenerateContext_AllFeaturesEnabled(t *testing.T) {
 	}
 	if !strings.Contains(ctx, "Database Type") {
 		t.Error("should show database type")
+	}
+	if !strings.Contains(ctx, "Use XDAL") {
+		t.Error("should show xdal usage")
 	}
 	if !strings.Contains(ctx, "Cache Type") {
 		t.Error("should show cache type")

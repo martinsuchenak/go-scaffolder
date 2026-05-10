@@ -30,6 +30,7 @@ var configPath string
 var templatesDir string
 var resourceName string
 var dbTypeFlag string
+var useXDALFlag bool
 var cacheTypeFlag string
 var patchMode bool
 var mcpListenAddr string
@@ -273,6 +274,11 @@ func enableFeatureCommand() *cli.Command {
 				Usage:    "Database type (mysql, postgresql, sqlite) -- required when enabling db",
 				AssignTo: &dbTypeFlag,
 			},
+			&cli.BoolFlag{
+				Name:     "use-xdal",
+				Usage:    "Use xdal for the database abstraction layer when enabling db",
+				AssignTo: &useXDALFlag,
+			},
 			&cli.StringFlag{
 				Name:     "cache-type",
 				Usage:    "Cache type (redis, valkey) -- required when enabling cache",
@@ -312,12 +318,14 @@ func runEnableFeature(ctx context.Context, cmd *cli.Command) error {
 	if feature == "db" {
 		if dbTypeFlag != "" {
 			cfg.DBType = config.DBType(dbTypeFlag)
+			cfg.UseXDAL = useXDALFlag
 		} else {
-			dbStr, askErr := p.AskSelect("Select database type", prompt.DBTypeOptions)
+			dbType, useXDAL, askErr := prompt.CollectDBOptions(p)
 			if askErr != nil {
 				return askErr
 			}
-			cfg.DBType = config.DBType(dbStr)
+			cfg.DBType = dbType
+			cfg.UseXDAL = useXDAL
 		}
 	}
 

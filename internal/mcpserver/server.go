@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/paularlott/mcp"
@@ -39,8 +40,9 @@ func NewServer(version string) *mcp.Server {
 		mcp.NewTool("scaffold", "Scaffold a new Go microservice project. Returns unified diff of all files.",
 			mcp.String("app_name", "Application name", mcp.Required()),
 			mcp.String("module_path", "Go module path (defaults to app_name)"),
-			mcp.String("features", "Comma-separated features: api,mcp,ui,db,cache,docker,nomad"),
+			mcp.String("features", "Comma-separated features: api,mcp,ui,db,cache,docker,nomad or all"),
 			mcp.String("db_type", "Database type: mysql, postgresql, sqlite"),
+			mcp.String("use_xdal", "Whether to use xdal for DB abstraction when db is enabled: true or false"),
 			mcp.String("cache_type", "Cache type: redis, valkey"),
 		),
 		handleScaffold,
@@ -79,6 +81,7 @@ func NewServer(version string) *mcp.Server {
 	enableParams := append([]mcp.Parameter{
 		mcp.String("feature", "Feature to enable: api, mcp, ui, db, cache, docker, nomad", mcp.Required()),
 		mcp.String("db_type", "Database type: mysql, postgresql, sqlite (required when enabling db)"),
+		mcp.String("use_xdal", "Whether to use xdal for DB abstraction when enabling db: true or false"),
 		mcp.String("cache_type", "Cache type: redis, valkey (required when enabling cache)"),
 	}, projectParams()...)
 	server.RegisterTool(
@@ -148,26 +151,15 @@ func handleScaffold(ctx context.Context, req *mcp.ToolRequest) (*mcp.ToolRespons
 	modulePath := req.StringOr("module_path", appName)
 	featuresStr := req.StringOr("features", "")
 	dbType := req.StringOr("db_type", "")
+	useXDAL, err := boolParam(req.StringOr("use_xdal", ""))
+	if err != nil {
+		return nil, err
+	}
 	cacheType := req.StringOr("cache_type", "")
 
 	fs := config.FeatureSet{}
-	for _, f := range strings.Split(featuresStr, ",") {
-		switch strings.TrimSpace(strings.ToLower(f)) {
-		case "api":
-			fs.API = true
-		case "mcp":
-			fs.MCP = true
-		case "ui":
-			fs.UI = true
-		case "db":
-			fs.DB = true
-		case "cache":
-			fs.Cache = true
-		case "docker":
-			fs.Docker = true
-		case "nomad":
-			fs.Nomad = true
-		}
+	for _, f := range config.ExpandFeatureNames(strings.Split(featuresStr, ",")) {
+		config.EnableFeature(&fs, f)
 	}
 	config.ResolveFeatures(&fs)
 
@@ -177,6 +169,7 @@ func handleScaffold(ctx context.Context, req *mcp.ToolRequest) (*mcp.ToolRespons
 		ModulePath: modulePath,
 		Features:   fs,
 		DBType:     config.DBType(dbType),
+		UseXDAL:    useXDAL,
 		CacheType:  config.CacheType(cacheType),
 	}
 
@@ -250,6 +243,11 @@ func handleEnableFeature(ctx context.Context, req *mcp.ToolRequest) (*mcp.ToolRe
 			return nil, fmt.Errorf("db_type is required when enabling db")
 		}
 		cfg.DBType = config.DBType(dbType)
+		useXDAL, parseErr := boolParam(req.StringOr("use_xdal", ""))
+		if parseErr != nil {
+			return nil, parseErr
+		}
+		cfg.UseXDAL = useXDAL
 	}
 
 	if feature == "cache" {
@@ -344,6 +342,18 @@ func handleEnableFeature(ctx context.Context, req *mcp.ToolRequest) (*mcp.ToolRe
 	}
 
 	return mcp.NewToolResponseText(buf.String()), nil
+}
+
+func boolParam(raw string) (bool, error) {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return false, nil
+	}
+	value, err := strconv.ParseBool(raw)
+	if err != nil {
+		return false, fmt.Errorf("invalid boolean value %q: use true or false", raw)
+	}
+	return value, nil
 }
 
 func handleProjectContext(ctx context.Context, req *mcp.ToolRequest) (*mcp.ToolResponse, error) {

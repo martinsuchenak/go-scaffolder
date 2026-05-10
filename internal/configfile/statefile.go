@@ -17,6 +17,7 @@ func WriteStateFile(path string, cfg *config.ProjectConfig) error {
 		AppName:    cfg.AppName,
 		ModulePath: cfg.ModulePath,
 		DBType:     string(cfg.DBType),
+		UseXDAL:    cfg.UseXDAL,
 		CacheType:  string(cfg.CacheType),
 	}
 

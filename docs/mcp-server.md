@@ -41,8 +41,9 @@ Scaffold a new Go microservice project. Returns unified diff of all generated fi
 |-----------|----------|-------------|
 | `app_name` | yes | Application name |
 | `module_path` | no | Go module path (defaults to `app_name`) |
-| `features` | no | Comma-separated features: `api,mcp,ui,db,cache,docker,nomad` |
+| `features` | no | Comma-separated features: `api,mcp,ui,db,cache,docker,nomad` or `all` |
 | `db_type` | no | Database type: `mysql`, `postgresql`, `sqlite` |
+| `use_xdal` | no | `true` to scaffold the DB layer on top of `xdal` |
 | `cache_type` | no | Cache type: `redis`, `valkey` |
 
 Example:
@@ -53,8 +54,9 @@ Example:
   "arguments": {
     "app_name": "my-service",
     "module_path": "github.com/myorg/my-service",
-    "features": "api,db,docker",
-    "db_type": "postgresql"
+    "features": "all",
+    "db_type": "postgresql",
+    "use_xdal": "true"
   }
 }
 ```
@@ -103,6 +105,7 @@ Enable a feature on an existing project. Returns unified diff of new files and p
 |-----------|----------|-------------|
 | `feature` | yes | Feature to enable: `api`, `mcp`, `ui`, `db`, `cache`, `docker`, `nomad` |
 | `db_type` | no | Required when enabling `db` |
+| `use_xdal` | no | Optional when enabling `db`; accepts `true` or `false` |
 | `cache_type` | no | Required when enabling `cache` |
 | `project_dir` | no | Path to project root |
 | `state_file` | no | Content of `.go-scaffolder.yaml` |

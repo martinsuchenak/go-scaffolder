@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"pgregory.net/rapid"
 	"gopkg.in/yaml.v3"
+	"pgregory.net/rapid"
 )
 
 // Feature: go-scaffolder, Property 18: Config file missing required fields produces error
@@ -68,8 +68,10 @@ func TestProperty17_ConfigFileModeParity(t *testing.T) {
 		}
 
 		var dbType string
+		var useXDAL bool
 		if enableDB {
 			dbType = rapid.SampledFrom([]string{"mysql", "postgresql", "sqlite"}).Draw(t, "DBType")
+			useXDAL = rapid.Bool().Draw(t, "UseXDAL")
 		}
 		var cacheType string
 		if enableCache {
@@ -81,6 +83,7 @@ func TestProperty17_ConfigFileModeParity(t *testing.T) {
 			OutputDir: "/tmp/test-" + appName,
 			Features:  features,
 			DBType:    dbType,
+			UseXDAL:   useXDAL,
 			CacheType: cacheType,
 		}
 
@@ -101,6 +104,9 @@ func TestProperty17_ConfigFileModeParity(t *testing.T) {
 		if enableDB && !pc.Features.DB {
 			t.Fatal("DB should be enabled")
 		}
+		if enableDB && pc.UseXDAL != useXDAL {
+			t.Fatalf("UseXDAL mismatch: got %v, want %v", pc.UseXDAL, useXDAL)
+		}
 	})
 }
 
@@ -113,6 +119,7 @@ func TestLoadValidYAML(t *testing.T) {
 		OutputDir: "/tmp/test",
 		Features:  []string{"api", "db"},
 		DBType:    "postgresql",
+		UseXDAL:   true,
 	})
 	os.WriteFile(path, data, 0644)
 
@@ -123,11 +130,37 @@ func TestLoadValidYAML(t *testing.T) {
 	if sc.AppName != "test-app" {
 		t.Fatalf("AppName = %q, want %q", sc.AppName, "test-app")
 	}
+	if !sc.UseXDAL {
+		t.Fatal("UseXDAL should be loaded from YAML")
+	}
 }
 
 func TestLoadFileNotFound(t *testing.T) {
 	_, err := Load("/nonexistent/config.yaml")
 	if err == nil {
 		t.Fatal("expected error for missing file")
+	}
+}
+
+func TestToProjectConfig_AllFeatureShortcut(t *testing.T) {
+	sc := ScaffoldConfig{
+		AppName:   "test-app",
+		OutputDir: "/tmp/test",
+		Features:  []string{"all"},
+		DBType:    "postgresql",
+		UseXDAL:   true,
+		CacheType: "redis",
+	}
+
+	pc, err := sc.ToProjectConfig()
+	if err != nil {
+		t.Fatalf("ToProjectConfig error: %v", err)
+	}
+
+	if !pc.Features.API || !pc.Features.MCP || !pc.Features.UI || !pc.Features.DB || !pc.Features.Cache || !pc.Features.Docker || !pc.Features.Nomad {
+		t.Fatal("all built-in features should be enabled when features contains all")
+	}
+	if !pc.UseXDAL {
+		t.Fatal("UseXDAL should be preserved")
 	}
 }
