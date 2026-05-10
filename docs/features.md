@@ -59,8 +59,8 @@ Generated files:
 - `web/src/main.ts` -- AlpineJS entry point
 - `web/src/style.css` -- TailwindCSS import
 - `web/templates/base.html` -- base HTML template
-- `web/package.json` -- with bun as package manager
-- `web/vite.config.ts` -- Vite configuration
+- `web/package.json` -- with bun as package manager and Tailwind Vite plugin dependency
+- `web/vite.config.ts` -- Vite configuration with `@tailwindcss/vite`
 - `web/dist/.gitkeep` -- placeholder until first frontend build
 
 Config additions: `frontend-build` task added to `Taskfile.yml`.

@@ -1,54 +1,146 @@
 # AGENTS
 
-## Project
+## Overview
 
-- Name: `{{.AppName}}`
+- App: `{{.AppName}}`
 - Module: `{{.ModulePath}}`
+- Primary config file: `{{.AppName}}-config.toml`
+- CLI support is always enabled.
 
-## Generated Structure
+## Enabled Features
 
-- CLI is always enabled.
+| Feature | Status |
+|---------|--------|
+| CLI | enabled |
+| API | {{if .Features.API}}enabled{{else}}disabled{{end}} |
+| MCP | {{if .Features.MCP}}enabled{{else}}disabled{{end}} |
+| UI | {{if .Features.UI}}enabled{{else}}disabled{{end}} |
+| DB | {{if .Features.DB}}enabled ({{.DBType}}{{if .UseXDAL}}, xdal{{end}}){{else}}disabled{{end}} |
+| Cache | {{if .Features.Cache}}enabled ({{.CacheType}}){{else}}disabled{{end}} |
+| Docker | {{if .Features.Docker}}enabled{{else}}disabled{{end}} |
+| Nomad | {{if .Features.Nomad}}enabled{{else}}disabled{{end}} |
+
+## Project Layout
+
+- `main.go`: CLI entrypoint.
+- `cmd/`: command registration and command implementations.
+- `build/`: build metadata injected through `ldflags`.
 {{- if .Features.API}}
-- API feature is enabled.
+- `cmd/routes/`: HTTP route registration.
+- `internal/rest/`: JSON/HTTP helpers.
+- `internal/auth/`: auth middleware placeholders.
+- `internal/ctxkeys/`: typed context keys.
+- `internal/sample/`: sample handler -> service -> storage implementation.
 {{- end}}
 {{- if .Features.MCP}}
-- MCP feature is enabled.
-{{- end}}
-{{- if .Features.UI}}
-- UI feature is enabled under `web/`.
+- `cmd/mcp/`: MCP server wiring and sample tool.
 {{- end}}
 {{- if .Features.DB}}
-- DB feature is enabled with `{{.DBType}}`{{if .UseXDAL}} and `xdal`{{end}}.
+- `internal/db/`: connection setup and schema.
+{{- if .UseXDAL}}
+  The DB package returns a `Connection` wrapper with:
+  `SQL` for raw `*sql.DB`
+  `DB` for `xdal.DBInterface`
+{{- else}}
+  The DB package returns a raw `*sql.DB`.
 {{- end}}
-{{- if .Features.Cache}}
-- Cache feature is enabled with `{{.CacheType}}`.
 {{- end}}
-{{- if .Features.Docker}}
-- Docker support is enabled.
+{{- if and .Features.Cache (eq (toString .CacheType) "redis")}}
+- `internal/redis/`: Redis client initialization.
 {{- end}}
-{{- if .Features.Nomad}}
-- Nomad support is enabled.
+{{- if and .Features.Cache (eq (toString .CacheType) "valkey")}}
+- `internal/valkey/`: Valkey client initialization.
+{{- end}}
+{{- if .Features.UI}}
+- `web/`: frontend source, templates, Vite config, and built assets.
+{{- end}}
+{{- if needsSRV}}
+- `internal/resolve/`: DNS SRV resolution support.
+{{- end}}
+
+## Configuration Model
+
+- Runtime config is loaded from `{{.AppName}}-config.toml`.
+- Environment variables and command flags can override config values.
+- Logging config is always present under `[log]`.
+{{- if .Features.API}}
+- API server config lives under `[server]`.
+{{- end}}
+{{- if .Features.DB}}
+- Database config lives under `[database]`.
+{{- end}}
+{{- if and .Features.Cache (eq (toString .CacheType) "redis")}}
+- Cache config lives under `[redis]`.
+{{- end}}
+{{- if and .Features.Cache (eq (toString .CacheType) "valkey")}}
+- Cache config lives under `[valkey]`.
 {{- end}}
 
 ## Working Rules
 
-- Prefer `task build`, `task test`, and `task lint` before custom commands.
-- Keep generated layering intact: handler -> service -> storage for API code.
-- Add new CLI commands, API endpoints, or MCP tools with `go-scaffolder add` where possible.
-- Do not remove marker comments beginning with `go-scaffolder:` unless you also update the patching flow.
+- Prefer the generated task targets before inventing ad hoc build or test commands.
+- Preserve the generated layering and self-registration patterns unless there is a deliberate refactor.
+- Use `go-scaffolder add` for new CLI commands, API endpoints, or MCP tools when the scaffolder is available.
+- Do not remove comments that start with `go-scaffolder:` unless you also update the patching flow that depends on them.
+- When editing feature-specific code, keep imports and initialization aligned with the enabled feature set.
 
-## Common Commands
+## Standard Commands
 
 ```sh
 task build
+task build-local
 task test
 task lint
 ```
 
+## Feature-Specific Commands
+
 {{- if .Features.UI}}
-Frontend build:
+Frontend:
 
 ```sh
 task frontend-build
 ```
 {{- end}}
+
+## Runtime Entry Points
+
+```sh
+go run . serve
+go run . init
+go run . completion --shell bash
+```
+
+{{- if .Features.DB}}
+## Database Notes
+
+- Connection setup supports direct `host:port` targets and DNS SRV names that start with `_`.
+- Schema lives in `internal/db/schema.sql`.
+{{- if .UseXDAL}}
+- Use `conn.DB` for portable query-builder-based access.
+- Use `conn.SQL` for migrations, pool configuration, or low-level SQL calls.
+{{- end}}
+{{- end}}
+
+{{- if .Features.Cache}}
+## Cache Notes
+
+- Cache clients also support SRV-style names starting with `_`.
+{{- end}}
+
+{{- if .Features.UI}}
+## Frontend Notes
+
+- Vite is used for frontend builds.
+- Tailwind CSS is integrated through `@tailwindcss/vite`.
+- The main frontend entrypoints are `web/src/main.ts` and `web/src/style.css`.
+{{- end}}
+
+## Testing Expectations
+
+- Run `task test` after meaningful Go changes.
+- Run `task lint` before concluding changes.
+{{- if .Features.UI}}
+- Run `task frontend-build` after frontend dependency or asset-pipeline changes.
+{{- end}}
+- Generated projects are expected to pass `go test ./...` out of the box.

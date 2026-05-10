@@ -70,8 +70,8 @@ my-service/
 │
 └── web/                            # UI feature only
     ├── embed.go                    # go:embed for assets
-    ├── package.json                # Frontend dependencies (bun)
-    ├── vite.config.ts
+    ├── package.json                # Frontend dependencies (bun, Vite, Tailwind)
+    ├── vite.config.ts              # Includes Tailwind's Vite plugin
     ├── dist/.gitkeep               # Placeholder until first build
     ├── src/
     │   ├── main.ts                 # AlpineJS entry point
