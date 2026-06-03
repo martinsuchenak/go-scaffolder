@@ -102,12 +102,12 @@ func ApplyPatches(baseDir string, patches []Patch) []PatchResult {
 }
 
 type ComputedPatch struct {
-	File       string
-	OldContent string
-	NewContent string
-	Applied    bool
+	File        string
+	OldContent  string
+	NewContent  string
+	Applied     bool
 	Description string
-	Content    string
+	Content     string
 }
 
 func ComputePatches(baseDir string, patches []Patch) []ComputedPatch {

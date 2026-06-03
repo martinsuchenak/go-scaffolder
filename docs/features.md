@@ -120,13 +120,14 @@ HashiCorp Nomad job definition.
 
 Not a user-selectable feature. Automatically included when any of **DB**, **Cache**, or **API** is enabled.
 
-Generates `internal/resolve/` with:
+Uses the external library `github.com/fortix/go-libs/netx/dns` for DNS SRV record resolution with:
 
 - DNS SRV record lookup with fallback to original host
 - Result caching with configurable TTL
 - RFC 2782 weighted SRV record ordering
-- `LookupSRV`, `LookupAllSRV`, `LookupIP`, `ResolveSRVAddress`, `ResolveSRVHttp` functions
 - `srv+` URL prefix support for transparent SRV resolution
+
+Generated code initializes `dns.NewDNSResolver` in DB and Cache connection setup.
 
 ## Feature Dependencies
 

@@ -121,7 +121,9 @@ func TestLoadValidYAML(t *testing.T) {
 		DBType:    "postgresql",
 		UseXDAL:   true,
 	})
-	os.WriteFile(path, data, 0644)
+	if err := os.WriteFile(path, data, 0644); err != nil {
+		t.Fatal(err)
+	}
 
 	sc, err := Load(path)
 	if err != nil {

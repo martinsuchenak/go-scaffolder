@@ -13,9 +13,9 @@ func GenerateContext(cfg *config.ProjectConfig, projectDir string) string {
 	var sb strings.Builder
 
 	sb.WriteString("# Project Context\n\n")
-	sb.WriteString(fmt.Sprintf("- **App Name**: %s\n", cfg.AppName))
-	sb.WriteString(fmt.Sprintf("- **Module Path**: %s\n", cfg.ModulePath))
-	sb.WriteString(fmt.Sprintf("- **Output Directory**: %s\n", cfg.OutputDir))
+	fmt.Fprintf(&sb, "- **App Name**: %s\n", cfg.AppName)
+	fmt.Fprintf(&sb, "- **Module Path**: %s\n", cfg.ModulePath)
+	fmt.Fprintf(&sb, "- **Output Directory**: %s\n", cfg.OutputDir)
 	sb.WriteString("\n## Enabled Features\n\n")
 
 	features := []struct {
@@ -37,15 +37,15 @@ func GenerateContext(cfg *config.ProjectConfig, projectDir string) string {
 		if f.Enabled {
 			status = "enabled"
 		}
-		sb.WriteString(fmt.Sprintf("- %s: %s\n", f.Name, status))
+		fmt.Fprintf(&sb, "- %s: %s\n", f.Name, status)
 	}
 
 	if cfg.Features.DB {
-		sb.WriteString(fmt.Sprintf("\n**Database Type**: %s\n", cfg.DBType))
-		sb.WriteString(fmt.Sprintf("**Use XDAL**: %t\n", cfg.UseXDAL))
+		fmt.Fprintf(&sb, "\n**Database Type**: %s\n", cfg.DBType)
+		fmt.Fprintf(&sb, "**Use XDAL**: %t\n", cfg.UseXDAL)
 	}
 	if cfg.Features.Cache {
-		sb.WriteString(fmt.Sprintf("\n**Cache Type**: %s\n", cfg.CacheType))
+		fmt.Fprintf(&sb, "\n**Cache Type**: %s\n", cfg.CacheType)
 	}
 
 	sb.WriteString("\n## Available Add Operations\n\n")
@@ -73,7 +73,7 @@ func GenerateContext(cfg *config.ProjectConfig, projectDir string) string {
 	anyAvailable := false
 	for _, f := range enableable {
 		if !f.Enabled {
-			sb.WriteString(fmt.Sprintf("- `%s`\n", f.Name))
+			fmt.Fprintf(&sb, "- `%s`\n", f.Name)
 			anyAvailable = true
 		}
 	}
@@ -119,10 +119,10 @@ func walkProjectTree(dir string, depth, maxDepth int) string {
 		}
 
 		if entry.IsDir() {
-			sb.WriteString(fmt.Sprintf("%s%s/\n", indent, name))
+			fmt.Fprintf(&sb, "%s%s/\n", indent, name)
 			sb.WriteString(walkProjectTree(filepath.Join(dir, name), depth+1, maxDepth))
 		} else {
-			sb.WriteString(fmt.Sprintf("%s%s\n", indent, name))
+			fmt.Fprintf(&sb, "%s%s\n", indent, name)
 		}
 	}
 

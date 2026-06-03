@@ -41,8 +41,6 @@ templates/
 ├── cache/                      # Cache feature
 │   ├── redis/internal/redis/redis.go.tmpl
 │   └── valkey/internal/valkey/valkey.go.tmpl
-├── resolve/                    # SRV resolution (auto-included)
-│   └── internal/resolve/resolve.go.tmpl
 ├── docker/                     # Docker feature
 │   └── Dockerfile.tmpl
 ├── nomad/                      # Nomad feature

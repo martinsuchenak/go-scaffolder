@@ -323,7 +323,7 @@ func handleEnableFeature(ctx context.Context, req *mcp.ToolRequest) (*mcp.ToolRe
 				if cp.Applied {
 					buf.WriteString(diff.UnifiedDiff(cp.File, cp.File, cp.OldContent, cp.NewContent))
 				} else {
-					buf.WriteString(fmt.Sprintf("# Could not compute patch for %s (%s)\n# Add manually:\n%s\n\n", cp.File, cp.Description, cp.Content))
+					fmt.Fprintf(&buf, "# Could not compute patch for %s (%s)\n# Add manually:\n%s\n\n", cp.File, cp.Description, cp.Content)
 				}
 			}
 		} else {
@@ -336,7 +336,7 @@ func handleEnableFeature(ctx context.Context, req *mcp.ToolRequest) (*mcp.ToolRe
 				if p.Replace != nil {
 					marker = p.Replace.StartMarker
 				}
-				buf.WriteString(fmt.Sprintf("# Patch for %s (%s)\n# Apply near marker: %s\n%s\n\n", p.File, p.Description, marker, content))
+				fmt.Fprintf(&buf, "# Patch for %s (%s)\n# Apply near marker: %s\n%s\n\n", p.File, p.Description, marker, content)
 			}
 		}
 	}

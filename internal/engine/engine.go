@@ -24,7 +24,6 @@ type templateSource struct {
 
 type Engine struct {
 	sources []templateSource
-	funcMap template.FuncMap
 }
 
 func New(embedded fs.FS) *Engine {

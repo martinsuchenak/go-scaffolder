@@ -42,11 +42,7 @@ func LoadExternalTemplates(dir string) (fs.FS, []TemplateEntry, error) {
 			return nil, nil, fmt.Errorf("template file not found: %s", ext.TemplatePath)
 		}
 
-		entries = append(entries, TemplateEntry{
-			TemplatePath:     ext.TemplatePath,
-			OutputPath:       ext.OutputPath,
-			RequiredFeatures: ext.RequiredFeatures,
-		})
+		entries = append(entries, TemplateEntry(ext))
 	}
 
 	externalFS := os.DirFS(dir)

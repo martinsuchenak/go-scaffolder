@@ -22,36 +22,6 @@ func genFeatureSet() *rapid.Generator[FeatureSet] {
 	})
 }
 
-func genValidProjectConfig() *rapid.Generator[ProjectConfig] {
-	return rapid.Custom(func(t *rapid.T) ProjectConfig {
-		appName := rapid.StringMatching(`[a-z][a-z0-9\-]{2,29}`).Draw(t, "AppName")
-		fs := genFeatureSet().Draw(t, "Features")
-		ResolveFeatures(&fs)
-
-		var dbType DBType
-		var useXDAL bool
-		if fs.DB {
-			dbType = rapid.SampledFrom([]DBType{DBMySQL, DBPostgreSQL, DBSQLite}).Draw(t, "DBType")
-			useXDAL = rapid.Bool().Draw(t, "UseXDAL")
-		}
-
-		var cacheType CacheType
-		if fs.Cache {
-			cacheType = rapid.SampledFrom([]CacheType{CacheRedis, CacheValkey}).Draw(t, "CacheType")
-		}
-
-		return ProjectConfig{
-			AppName:    appName,
-			OutputDir:  "/tmp/test-" + appName,
-			ModulePath: appName,
-			Features:   fs,
-			DBType:     dbType,
-			UseXDAL:    useXDAL,
-			CacheType:  cacheType,
-		}
-	})
-}
-
 // Feature: go-scaffolder, Property 1: Feature resolution invariants
 func TestProperty1_FeatureResolutionInvariants(t *testing.T) {
 	rapid.Check(t, func(t *rapid.T) {
@@ -197,6 +167,86 @@ func TestValidate(t *testing.T) {
 				if !strings.Contains(err.Error(), tt.errMsg) {
 					t.Errorf("error %q should contain %q", err.Error(), tt.errMsg)
 				}
+			}
+		})
+	}
+}
+
+func TestEnableFeature(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		wantOK   bool
+		wantFlag func(fs *FeatureSet) bool
+	}{
+		{"api", "api", true, func(fs *FeatureSet) bool { return fs.API }},
+		{"API uppercase", "API", true, func(fs *FeatureSet) bool { return fs.API }},
+		{" Api  spaces", " Api ", true, func(fs *FeatureSet) bool { return fs.API }},
+		{"mcp", "mcp", true, func(fs *FeatureSet) bool { return fs.MCP }},
+		{"db", "db", true, func(fs *FeatureSet) bool { return fs.DB }},
+		{"cache", "cache", true, func(fs *FeatureSet) bool { return fs.Cache }},
+		{"docker", "docker", true, func(fs *FeatureSet) bool { return fs.Docker }},
+		{"nomad", "nomad", true, func(fs *FeatureSet) bool { return fs.Nomad }},
+		{"ui", "ui", true, func(fs *FeatureSet) bool { return fs.UI }},
+		{"unknown", "unknown", false, nil},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fs := &FeatureSet{}
+			gotOK := EnableFeature(fs, tt.input)
+			if gotOK != tt.wantOK {
+				t.Errorf("EnableFeature(%q) = %v, want %v", tt.input, gotOK, tt.wantOK)
+			}
+			if tt.wantFlag != nil && !tt.wantFlag(fs) {
+				t.Errorf("feature flag not set for input %q", tt.input)
+			}
+		})
+	}
+}
+
+func TestExpandFeatureNames(t *testing.T) {
+	tests := []struct {
+		name  string
+		input []string
+	}{
+		{"all shortcut", []string{"all"}},
+		{"all with extra", []string{"all", "custom-tag"}},
+		{"specific features", []string{"api", " db "}},
+		{"empty", []string{}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := ExpandFeatureNames(tt.input)
+			if len(got) == 0 && len(tt.input) > 0 {
+				t.Errorf("ExpandFeatureNames(%v) returned empty", tt.input)
+			}
+		})
+	}
+}
+
+func TestHasFeature(t *testing.T) {
+	tests := []struct {
+		name    string
+		fs      FeatureSet
+		feature string
+		want    bool
+	}{
+		{"cli true", FeatureSet{CLI: true}, "cli", true},
+		{"api true", FeatureSet{API: true}, "api", true},
+		{"mcp false", FeatureSet{}, "mcp", false},
+		{"ui true", FeatureSet{UI: true}, "ui", true},
+		{"db true", FeatureSet{DB: true}, "db", true},
+		{"cache true", FeatureSet{Cache: true}, "cache", true},
+		{"docker true", FeatureSet{Docker: true}, "docker", true},
+		{"nomad true", FeatureSet{Nomad: true}, "nomad", true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.fs.HasFeature(tt.feature); got != tt.want {
+				t.Errorf("HasFeature(%q) = %v, want %v", tt.feature, got, tt.want)
 			}
 		})
 	}

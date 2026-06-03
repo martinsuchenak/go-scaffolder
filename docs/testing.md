@@ -43,7 +43,7 @@ Property-based tests use [rapid](https://github.com/flyingmutant/rapid) to verif
 | 13. MCP wiring | MCP server started in serve command |
 | 14. API endpoints | /health and /metrics registered |
 | 15. No partial output | Template errors produce no files |
-| 16. SRV resolution usage | DB/Cache init code calls resolve.LookupSRV |
+| 16. SRV resolution usage | DB/Cache init code initializes dns.NewDNSResolver |
 | 17. Config file parity | Config file mode produces same output as interactive |
 | 18. Missing required fields | Config file with missing fields produces descriptive error |
 
@@ -51,13 +51,14 @@ Property-based tests use [rapid](https://github.com/flyingmutant/rapid) to verif
 
 Unit tests cover specific examples and edge cases:
 
-- **config** -- validation of various valid/invalid configurations, `HasFeature` method
+- **config** -- validation, feature resolution invariants, `EnableFeature`, `ExpandFeatureNames`, `HasFeature`
 - **configfile** -- YAML loading, missing files, parse errors, state file write/read
 - **patcher** -- marker-based patching: insert above/below, replace blocks, missing markers, missing files
-- **prompt** -- validation functions for app name, output dir, and resource name
+- **prompt** -- validation functions for app name, output dir, and resource name; config collection with stub prompter
 - **writer** -- file writing, directory creation, error handling
-- **postgen** -- `go mod tidy` execution and error handling
-- **engine/manifest** -- external template loading, overrides, custom feature tags
+- **postgen** -- `go mod tidy` execution, dependency resolution, timeout handling
+- **engine/manifest** -- external template loading, overrides, custom feature tags, invalid YAML, empty paths, multiple sources
+- **mcpserver** -- handler tests for scaffold, add, enable_feature, project_context; config resolution; bool param parsing
 
 ## Integration Tests
 
@@ -97,9 +98,12 @@ Tests for the extension system verify:
 - Loading a valid manifest and template files
 - Error on missing manifest.yaml
 - Error on missing template files referenced in manifest
+- Error on invalid YAML content
+- Error on empty template or output paths
 - Overriding built-in templates by matching output path
 - Adding new templates
 - Custom feature tag gating (included only when tag is active)
+- Multiple external template sources with overlapping overrides
 
 ## Test Location
 
@@ -112,11 +116,14 @@ internal/
 ├── patcher/
 │   └── patcher_test.go             # Marker patching, replace blocks, edge cases
 ├── engine/
-│   ├── engine_test.go              # Property tests (3-16)
+│   ├── engine_test.go              # Property tests (3-16), string transforms, feature checks, RenderAdd errors
 │   └── manifest_test.go            # External template tests
 ├── writer/writer_test.go           # Unit tests
-├── postgen/postgen_test.go         # Unit tests
-└── prompt/prompt_test.go           # Unit tests (incl. resource name validation)
+├── postgen/postgen_test.go         # Unit tests (incl. timeout handling)
+├── prompt/prompt_test.go           # Unit tests (validation, config collection with stubs)
+└── mcpserver/
+    ├── server_test.go              # Handler tests: scaffold, add, enable_feature, context, resolveConfig
+    └── context_test.go             # Project context generation tests
 tests/
 └── integration_test.go             # Integration tests (build tag: integration)
 ```

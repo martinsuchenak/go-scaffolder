@@ -3,6 +3,7 @@ package configfile
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/martinsuchenak/go-scaffolder/internal/config"
@@ -102,7 +103,7 @@ func TestWriteStateFileAllFeatures(t *testing.T) {
 
 	content := string(data)
 	for _, feature := range []string{"api", "mcp", "ui", "db", "cache", "docker", "nomad"} {
-		if !contains(content, feature) {
+		if !strings.Contains(content, feature) {
 			t.Errorf("state file should contain feature %q", feature)
 		}
 	}
@@ -150,17 +151,4 @@ func TestParseStateContentInvalid(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for invalid YAML")
 	}
-}
-
-func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(s) > 0 && containsSubstr(s, substr))
-}
-
-func containsSubstr(s, substr string) bool {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return true
-		}
-	}
-	return false
 }

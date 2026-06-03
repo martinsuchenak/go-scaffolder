@@ -593,3 +593,166 @@ func TestProperty16_SRVResolutionUsage(t *testing.T) {
 		}
 	})
 }
+
+func TestToCamel(t *testing.T) {
+	tests := []struct {
+		input, want string
+	}{
+		{"my-resource", "myResource"},
+		{"MyResource", "myResource"},
+		{"my_resource", "myResource"},
+		{"my resource", "myResource"},
+		{"simple", "simple"},
+		{"", ""},
+		{"ABC", "aBC"},
+		{"hello-world-test", "helloWorldTest"},
+	}
+	for _, tt := range tests {
+		if got := toCamel(tt.input); got != tt.want {
+			t.Errorf("toCamel(%q) = %q, want %q", tt.input, got, tt.want)
+		}
+	}
+}
+
+func TestToPascal(t *testing.T) {
+	tests := []struct {
+		input, want string
+	}{
+		{"my-resource", "MyResource"},
+		{"MyResource", "MyResource"},
+		{"my_resource", "MyResource"},
+		{"simple", "Simple"},
+		{"", ""},
+		{"hello-world-test", "HelloWorldTest"},
+	}
+	for _, tt := range tests {
+		if got := toPascal(tt.input); got != tt.want {
+			t.Errorf("toPascal(%q) = %q, want %q", tt.input, got, tt.want)
+		}
+	}
+}
+
+func TestToSnake(t *testing.T) {
+	tests := []struct {
+		input, want string
+	}{
+		{"MyResource", "my_resource"},
+		{"my-resource", "my_resource"},
+		{"my_resource", "my_resource"},
+		{"simple", "simple"},
+		{"", ""},
+		{"HelloWorldTest", "hello_world_test"},
+	}
+	for _, tt := range tests {
+		if got := toSnake(tt.input); got != tt.want {
+			t.Errorf("toSnake(%q) = %q, want %q", tt.input, got, tt.want)
+		}
+	}
+}
+
+func TestToKebab(t *testing.T) {
+	tests := []struct {
+		input, want string
+	}{
+		{"MyResource", "my-resource"},
+		{"my-resource", "my-resource"},
+		{"my_resource", "my-resource"},
+		{"simple", "simple"},
+		{"", ""},
+		{"HelloWorldTest", "hello-world-test"},
+	}
+	for _, tt := range tests {
+		if got := toKebab(tt.input); got != tt.want {
+			t.Errorf("toKebab(%q) = %q, want %q", tt.input, got, tt.want)
+		}
+	}
+}
+
+func TestSplitWords(t *testing.T) {
+	tests := []struct {
+		input string
+		want  []string
+	}{
+		{"my-resource", []string{"my", "resource"}},
+		{"MyResource", []string{"My", "Resource"}},
+		{"my_resource", []string{"my", "resource"}},
+		{"simple", []string{"simple"}},
+		{"", nil},
+		{"hello-world-test", []string{"hello", "world", "test"}},
+	}
+	for _, tt := range tests {
+		if got := splitWords(tt.input); !equalStrings(got, tt.want) {
+			t.Errorf("splitWords(%q) = %v, want %v", tt.input, got, tt.want)
+		}
+	}
+}
+
+func equalStrings(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
+}
+
+func TestRenderAdd_UnknownType(t *testing.T) {
+	eng := newEngine()
+	cfg := &config.ProjectConfig{AppName: "test"}
+	_, err := eng.RenderAdd(cfg, "unknown-type")
+	if err == nil {
+		t.Fatal("expected error for unknown add type")
+	}
+	if !strings.Contains(err.Error(), "unknown add type") {
+		t.Errorf("unexpected error message: %v", err)
+	}
+}
+
+func TestFeatureEnabled(t *testing.T) {
+	tests := []struct {
+		name    string
+		cfg     config.ProjectConfig
+		feature string
+		want    bool
+	}{
+		{"cli enabled", config.ProjectConfig{Features: config.FeatureSet{CLI: true}}, "cli", true},
+		{"cli disabled", config.ProjectConfig{Features: config.FeatureSet{}}, "cli", false},
+		{"api enabled", config.ProjectConfig{Features: config.FeatureSet{API: true}}, "api", true},
+		{"api disabled", config.ProjectConfig{Features: config.FeatureSet{}}, "api", false},
+		{"cache_redis", config.ProjectConfig{Features: config.FeatureSet{Cache: true}, CacheType: config.CacheRedis}, "cache_redis", true},
+		{"cache_valkey", config.ProjectConfig{Features: config.FeatureSet{Cache: true}, CacheType: config.CacheValkey}, "cache_valkey", true},
+		{"custom tag enabled", config.ProjectConfig{CustomTags: []string{"my_module"}}, "my_module", true},
+		{"custom tag disabled", config.ProjectConfig{}, "my_module", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			eng := newEngine()
+			if got := eng.featureEnabled(&tt.cfg, tt.feature); got != tt.want {
+				t.Errorf("featureEnabled(%q) = %v, want %v", tt.feature, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestMergedManifest(t *testing.T) {
+	eng := newEngine()
+	manifest := eng.MergedManifest()
+	if len(manifest) == 0 {
+		t.Fatal("expected non-empty manifest")
+	}
+
+	mainFound := false
+	for _, entry := range manifest {
+		if entry.OutputPath == "main.go" {
+			mainFound = true
+			break
+		}
+	}
+	if !mainFound {
+		t.Error("manifest should contain main.go")
+	}
+}

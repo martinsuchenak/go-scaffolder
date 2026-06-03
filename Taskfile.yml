@@ -36,28 +36,35 @@ tasks:
     cmds:
       - GOMODCACHE={{.ROOT_DIR}}/.modcache GOCACHE={{.ROOT_DIR}}/.cache/go-build GOSUMDB=off go test -tags integration ./... -v -count=1 -timeout 300s
 
-  lint:
+  vet:
     desc: Run go vet
     cmds:
       - go vet ./...
 
-  push-tag:
-    desc: Create and push a version tag (usage task push-tag -- v0.3.0)
+  lint:
+    desc: Run golangci-lint
     cmds:
-      - |
-        TAG={{.CLI_ARGS}}
-        if [ -z "$TAG" ]; then
-          echo "Usage: task push-tag -- v0.3.0"
-          exit 1
-        fi
-        if ! echo "$TAG" | grep -qE '^v[0-9]+\.[0-9]+\.[0-9]+'; then
-          echo "Tag must match vX.Y.Z format"
-          exit 1
-        fi
-        echo "Creating tag $TAG..."
-        git tag -a "$TAG" -m "Release $TAG"
-        git push origin "$TAG"
-        echo "Tag $TAG pushed. GitHub Actions will create the release."
+      - golangci-lint run
+
+  check:
+    desc: Full CI gate — vet + lint + unit tests with race detector
+    cmds:
+      - task: vet
+      - task: lint
+      - task: test-all
+
+  release:
+    desc: 'Create a version tag and push it (usage: task release -- v0.1.0)'
+    deps: [check, build]
+    preconditions:
+      - sh: 'test -n "{{.CLI_ARGS}}"'
+        msg: 'version tag required (e.g. task release -- v0.1.0)'
+      - sh: 'git diff --quiet'
+        msg: 'working tree has uncommitted changes'
+    cmds:
+      - git tag -a "{{.CLI_ARGS}}" -m "Release {{.CLI_ARGS}}"
+      - git push origin {{.CLI_ARGS}}
+      - echo "Tagged and pushed {{.CLI_ARGS}}"
 
   release-local:
     desc: Test goreleaser locally (snapshot, no publish)
