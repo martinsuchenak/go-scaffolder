@@ -16,10 +16,11 @@ import (
 	"github.com/martinsuchenak/go-scaffolder/internal/diff"
 	"github.com/martinsuchenak/go-scaffolder/internal/engine"
 	"github.com/martinsuchenak/go-scaffolder/internal/patcher"
+	"github.com/martinsuchenak/go-scaffolder/internal/prompt"
 	"github.com/martinsuchenak/go-scaffolder/templates"
 )
 
-const projectDirDesc = "Absolute path to the project root directory (where .go-scaffolder.yaml lives). Optional; if omitted the server looks in its working directory."
+const projectDirDesc = "Path to the project root directory (where .go-scaffolder.yaml lives), relative to the server's root directory. Optional; if omitted the server looks in its root directory. Must not escape the server's root directory."
 const stateFileDesc = "Content of .go-scaffolder.yaml as a string. Optional; use for fully remote operation when the server cannot access the project filesystem. Takes precedence over project_dir."
 const appNameDesc = "Application name. Optional; used as fallback when no state file is available."
 const modulePathDesc = "Go module path. Optional; used as fallback when no state file is available (defaults to app_name)."
@@ -33,7 +34,9 @@ func projectParams() []mcp.Parameter {
 	}
 }
 
-func NewServer(version string) *mcp.Server {
+// NewServer creates the MCP server. rootDir bounds every project_dir the
+// server will read from or list; requests that resolve outside it are rejected.
+func NewServer(version string, rootDir string) *mcp.Server {
 	server := mcp.NewServer("go-scaffolder", version)
 
 	server.RegisterTool(
@@ -54,7 +57,7 @@ func NewServer(version string) *mcp.Server {
 	server.RegisterTool(
 		mcp.NewTool("add_cli_command", "Add a new CLI command to an existing scaffolded project. Returns unified diff.", addCliParams...),
 		func(ctx context.Context, req *mcp.ToolRequest) (*mcp.ToolResponse, error) {
-			return handleAdd(ctx, req, "cli-command", "")
+			return handleAdd(ctx, req, "cli-command", "", rootDir)
 		},
 	)
 
@@ -64,7 +67,7 @@ func NewServer(version string) *mcp.Server {
 	server.RegisterTool(
 		mcp.NewTool("add_api_endpoint", "Add a new API endpoint resource to an existing scaffolded project. Returns unified diff.", addApiParams...),
 		func(ctx context.Context, req *mcp.ToolRequest) (*mcp.ToolResponse, error) {
-			return handleAdd(ctx, req, "api-endpoint", "api")
+			return handleAdd(ctx, req, "api-endpoint", "api", rootDir)
 		},
 	)
 
@@ -74,7 +77,7 @@ func NewServer(version string) *mcp.Server {
 	server.RegisterTool(
 		mcp.NewTool("add_mcp_tool", "Add a new MCP tool to an existing scaffolded project. Returns unified diff.", addMcpParams...),
 		func(ctx context.Context, req *mcp.ToolRequest) (*mcp.ToolResponse, error) {
-			return handleAdd(ctx, req, "mcp-tool", "mcp")
+			return handleAdd(ctx, req, "mcp-tool", "mcp", rootDir)
 		},
 	)
 
@@ -86,45 +89,88 @@ func NewServer(version string) *mcp.Server {
 	}, projectParams()...)
 	server.RegisterTool(
 		mcp.NewTool("enable_feature", "Enable a feature on an existing scaffolded project. Returns unified diff of new and modified files.", enableParams...),
-		handleEnableFeature,
+		func(ctx context.Context, req *mcp.ToolRequest) (*mcp.ToolResponse, error) {
+			return handleEnableFeature(ctx, req, rootDir)
+		},
 	)
 
 	server.RegisterTool(
 		mcp.NewTool("project_context", "Generate a rich context summary of an existing scaffolded project for LLM consumption.", projectParams()...),
-		handleProjectContext,
+		func(ctx context.Context, req *mcp.ToolRequest) (*mcp.ToolResponse, error) {
+			return handleProjectContext(ctx, req, rootDir)
+		},
 	)
 
 	return server
 }
 
-func resolveConfig(req *mcp.ToolRequest) (*config.ProjectConfig, string, error) {
+// resolveProjectDir resolves rawDir against rootDir and rejects any result
+// that escapes rootDir, so a caller-supplied project_dir can never point the
+// server at an arbitrary filesystem path.
+func resolveProjectDir(rootDir, rawDir string) (string, error) {
+	absRoot, err := filepath.Abs(rootDir)
+	if err != nil {
+		return "", fmt.Errorf("resolving root directory: %w", err)
+	}
+	if rawDir == "" {
+		return absRoot, nil
+	}
+
+	candidate := rawDir
+	if !filepath.IsAbs(candidate) {
+		candidate = filepath.Join(absRoot, candidate)
+	}
+	absDir, err := filepath.Abs(candidate)
+	if err != nil {
+		return "", fmt.Errorf("resolving project_dir: %w", err)
+	}
+
+	rel, err := filepath.Rel(absRoot, absDir)
+	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+		return "", fmt.Errorf("project_dir %q escapes the server root %q", rawDir, absRoot)
+	}
+	return absDir, nil
+}
+
+func resolveConfig(req *mcp.ToolRequest, rootDir string) (*config.ProjectConfig, string, error) {
 	stateContent := req.StringOr("state_file", "")
-	projectDir := req.StringOr("project_dir", "")
+	rawProjectDir := req.StringOr("project_dir", "")
 
 	if stateContent != "" {
 		cfg, err := configfile.ParseStateContent(stateContent)
 		if err != nil {
 			return nil, "", fmt.Errorf("parsing state_file content: %w", err)
 		}
-		return cfg, projectDir, nil
+		if rawProjectDir == "" {
+			return cfg, "", nil
+		}
+		safeDir, err := resolveProjectDir(rootDir, rawProjectDir)
+		if err != nil {
+			return nil, "", err
+		}
+		return cfg, safeDir, nil
 	}
 
-	if projectDir != "" {
-		absDir, err := filepath.Abs(projectDir)
+	if rawProjectDir != "" {
+		safeDir, err := resolveProjectDir(rootDir, rawProjectDir)
 		if err != nil {
-			return nil, "", fmt.Errorf("resolving project_dir: %w", err)
+			return nil, "", err
 		}
-		stateFilePath := filepath.Join(absDir, configfile.StateFileName)
+		stateFilePath := filepath.Join(safeDir, configfile.StateFileName)
 		cfg, err := configfile.LoadStateFile(stateFilePath)
 		if err != nil {
-			return nil, absDir, fmt.Errorf("loading state file from %s: %w", stateFilePath, err)
+			return nil, safeDir, fmt.Errorf("loading state file from %s: %w", stateFilePath, err)
 		}
-		return cfg, absDir, nil
+		return cfg, safeDir, nil
 	}
 
-	cfg, err := configfile.LoadStateFile(configfile.StateFileName)
+	safeDir, err := resolveProjectDir(rootDir, "")
+	if err != nil {
+		return nil, "", err
+	}
+	cfg, err := configfile.LoadStateFile(filepath.Join(safeDir, configfile.StateFileName))
 	if err == nil {
-		return cfg, ".", nil
+		return cfg, safeDir, nil
 	}
 
 	appName := req.StringOr("app_name", "")
@@ -191,8 +237,8 @@ func handleScaffold(ctx context.Context, req *mcp.ToolRequest) (*mcp.ToolRespons
 	return mcp.NewToolResponseText(buf.String()), nil
 }
 
-func handleAdd(ctx context.Context, req *mcp.ToolRequest, addType string, requiredFeature string) (*mcp.ToolResponse, error) {
-	cfg, _, err := resolveConfig(req)
+func handleAdd(ctx context.Context, req *mcp.ToolRequest, addType string, requiredFeature string, rootDir string) (*mcp.ToolResponse, error) {
+	cfg, _, err := resolveConfig(req, rootDir)
 	if err != nil {
 		return nil, err
 	}
@@ -204,6 +250,10 @@ func handleAdd(ctx context.Context, req *mcp.ToolRequest, addType string, requir
 	name, err := req.String("name")
 	if err != nil {
 		return nil, fmt.Errorf("name is required")
+	}
+
+	if err := prompt.ValidateResourceName(name); err != nil {
+		return nil, err
 	}
 
 	cfg.ResourceName = name
@@ -222,8 +272,8 @@ func handleAdd(ctx context.Context, req *mcp.ToolRequest, addType string, requir
 	return mcp.NewToolResponseText(buf.String()), nil
 }
 
-func handleEnableFeature(ctx context.Context, req *mcp.ToolRequest) (*mcp.ToolResponse, error) {
-	cfg, projectDir, err := resolveConfig(req)
+func handleEnableFeature(ctx context.Context, req *mcp.ToolRequest, rootDir string) (*mcp.ToolResponse, error) {
+	cfg, projectDir, err := resolveConfig(req, rootDir)
 	if err != nil {
 		return nil, err
 	}
@@ -356,8 +406,8 @@ func boolParam(raw string) (bool, error) {
 	return value, nil
 }
 
-func handleProjectContext(ctx context.Context, req *mcp.ToolRequest) (*mcp.ToolResponse, error) {
-	cfg, projectDir, err := resolveConfig(req)
+func handleProjectContext(ctx context.Context, req *mcp.ToolRequest, rootDir string) (*mcp.ToolResponse, error) {
+	cfg, projectDir, err := resolveConfig(req, rootDir)
 	if err != nil {
 		return nil, err
 	}

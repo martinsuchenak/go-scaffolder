@@ -3,6 +3,7 @@ package patcher
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -32,7 +33,7 @@ func ApplyPatches(baseDir string, patches []Patch) []PatchResult {
 	var results []PatchResult
 
 	for _, p := range patches {
-		path := baseDir + "/" + p.File
+		path := filepath.Join(baseDir, p.File)
 		displayContent := p.Content
 		if p.Replace != nil {
 			displayContent = p.Replace.Content
@@ -114,7 +115,7 @@ func ComputePatches(baseDir string, patches []Patch) []ComputedPatch {
 	var results []ComputedPatch
 
 	for _, p := range patches {
-		path := baseDir + "/" + p.File
+		path := filepath.Join(baseDir, p.File)
 		displayContent := p.Content
 		if p.Replace != nil {
 			displayContent = p.Replace.Content

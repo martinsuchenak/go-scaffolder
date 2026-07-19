@@ -35,6 +35,7 @@ var cacheTypeFlag string
 var patchMode bool
 var mcpListenAddr string
 var mcpToken string
+var mcpRootDir string
 
 func main() {
 	app := &cli.Command{
@@ -172,9 +173,19 @@ func serveCommand() *cli.Command {
 				AssignTo: &mcpToken,
 				EnvVars:  []string{"MCP_TOKEN"},
 			},
+			&cli.StringFlag{
+				Name:         "root",
+				Usage:        "Root directory the server is allowed to read project files from; project_dir requests may not escape it",
+				DefaultValue: ".",
+				AssignTo:     &mcpRootDir,
+			},
 		},
 		Run: func(ctx context.Context, cmd *cli.Command) error {
-			server := mcpserver.NewServer(version)
+			rootDir, err := filepath.Abs(mcpRootDir)
+			if err != nil {
+				return fmt.Errorf("resolving root directory: %w", err)
+			}
+			server := mcpserver.NewServer(version, rootDir)
 			var handler http.HandlerFunc = server.HandleRequest
 			if mcpToken != "" {
 				handler = bearerAuth(mcpToken, handler)

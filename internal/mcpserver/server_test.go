@@ -2,6 +2,8 @@ package mcpserver
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -11,7 +13,7 @@ import (
 )
 
 func TestNewServer(t *testing.T) {
-	server := NewServer("test")
+	server := NewServer("test", ".")
 	if server == nil {
 		t.Fatal("NewServer returned nil")
 	}
@@ -84,9 +86,20 @@ func TestHandleAdd_UnknownType(t *testing.T) {
 	req := mcp.NewToolRequest(map[string]interface{}{
 		"app_name": "test",
 	})
-	_, err := handleAdd(context.Background(), req, "unknown-type", "")
+	_, err := handleAdd(context.Background(), req, "unknown-type", "", ".")
 	if err == nil {
 		t.Fatal("expected error for unknown add type")
+	}
+}
+
+func TestHandleAdd_RejectsPathTraversalName(t *testing.T) {
+	req := mcp.NewToolRequest(map[string]interface{}{
+		"app_name": "test",
+		"name":     "../../../../tmp/evil",
+	})
+	_, err := handleAdd(context.Background(), req, "cli-command", "", ".")
+	if err == nil {
+		t.Fatal("expected error for path-traversal resource name")
 	}
 }
 
@@ -98,7 +111,7 @@ features:
   - api`,
 	})
 
-	cfg, _, err := resolveConfig(req)
+	cfg, _, err := resolveConfig(req, ".")
 	if err != nil {
 		t.Fatalf("resolveConfig error: %v", err)
 	}
@@ -110,9 +123,49 @@ features:
 	}
 }
 
+func TestResolveConfig_ProjectDirEscapeRejected(t *testing.T) {
+	req := mcp.NewToolRequest(map[string]interface{}{
+		"app_name":    "test",
+		"project_dir": "../../../../etc",
+	})
+
+	_, _, err := resolveConfig(req, ".")
+	if err == nil {
+		t.Fatal("expected error for project_dir escaping the server root")
+	}
+}
+
+func TestResolveConfig_ProjectDirAbsoluteEscapeRejected(t *testing.T) {
+	req := mcp.NewToolRequest(map[string]interface{}{
+		"app_name":    "test",
+		"project_dir": "/etc",
+	})
+
+	_, _, err := resolveConfig(req, t.TempDir())
+	if err == nil {
+		t.Fatal("expected error for absolute project_dir outside the server root")
+	}
+}
+
+func TestResolveProjectDir_WithinRootAllowed(t *testing.T) {
+	root := t.TempDir()
+	sub := filepath.Join(root, "sub")
+	if err := os.Mkdir(sub, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	got, err := resolveProjectDir(root, "sub")
+	if err != nil {
+		t.Fatalf("resolveProjectDir error: %v", err)
+	}
+	if got != sub {
+		t.Errorf("resolveProjectDir = %q, want %q", got, sub)
+	}
+}
+
 func TestResolveConfig_NoStateNoApp(t *testing.T) {
 	req := mcp.NewToolRequest(map[string]interface{}{})
-	_, _, err := resolveConfig(req)
+	_, _, err := resolveConfig(req, ".")
 	if err == nil {
 		t.Fatal("expected error when no state file and no app_name")
 	}
@@ -123,7 +176,7 @@ func TestResolveConfig_FallbackAppName(t *testing.T) {
 		"app_name": "fallback-app",
 	})
 
-	cfg, _, err := resolveConfig(req)
+	cfg, _, err := resolveConfig(req, ".")
 	if err != nil {
 		t.Fatalf("resolveConfig error: %v", err)
 	}
@@ -173,7 +226,7 @@ features:
 		"feature": "api",
 	})
 
-	_, err := handleEnableFeature(context.Background(), req)
+	_, err := handleEnableFeature(context.Background(), req, ".")
 	if err == nil {
 		t.Fatal("expected error for already enabled feature")
 	}
@@ -188,7 +241,7 @@ func TestHandleEnableFeature_Unknown(t *testing.T) {
 		"feature":  "unknown-feature",
 	})
 
-	_, err := handleEnableFeature(context.Background(), req)
+	_, err := handleEnableFeature(context.Background(), req, ".")
 	if err == nil {
 		t.Fatal("expected error for unknown feature")
 	}
@@ -200,7 +253,7 @@ func TestHandleEnableFeature_DB_MissingType(t *testing.T) {
 		"feature":  "db",
 	})
 
-	_, err := handleEnableFeature(context.Background(), req)
+	_, err := handleEnableFeature(context.Background(), req, ".")
 	if err == nil {
 		t.Fatal("expected error for missing db_type")
 	}
@@ -212,7 +265,7 @@ func TestHandleEnableFeature_Cache_MissingType(t *testing.T) {
 		"feature":  "cache",
 	})
 
-	_, err := handleEnableFeature(context.Background(), req)
+	_, err := handleEnableFeature(context.Background(), req, ".")
 	if err == nil {
 		t.Fatal("expected error for missing cache_type")
 	}
@@ -226,7 +279,7 @@ features:
   - api`,
 	})
 
-	resp, err := handleProjectContext(context.Background(), req)
+	resp, err := handleProjectContext(context.Background(), req, ".")
 	if err != nil {
 		t.Fatalf("handleProjectContext error: %v", err)
 	}

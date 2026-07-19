@@ -128,15 +128,6 @@ var FeatureSelectionOptions = []string{"All", "API", "MCP", "UI", "DB", "Cache",
 var DBTypeOptions = []string{"mysql", "postgresql", "sqlite"}
 var CacheTypeOptions = []string{"redis", "valkey"}
 
-func normalizeFeatureSelections(selections []string) []string {
-	for _, selection := range selections {
-		if strings.EqualFold(selection, "all") {
-			return append([]string(nil), FeatureOptions...)
-		}
-	}
-	return selections
-}
-
 func CollectDBOptions(p Prompter) (config.DBType, bool, error) {
 	dbStr, err := p.AskSelect("Select database type", DBTypeOptions)
 	if err != nil {
@@ -184,7 +175,7 @@ func CollectConfig(p Prompter) (*config.ProjectConfig, error) {
 	}
 
 	fs := config.FeatureSet{}
-	for _, f := range normalizeFeatureSelections(features) {
+	for _, f := range config.ExpandFeatureNames(features) {
 		config.EnableFeature(&fs, f)
 	}
 
