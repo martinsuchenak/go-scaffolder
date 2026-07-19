@@ -1,6 +1,6 @@
 module github.com/martinsuchenak/go-scaffolder
 
-go 1.26.3
+go 1.26.4
 
 require (
 	github.com/paularlott/cli v0.8.5
