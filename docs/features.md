@@ -13,7 +13,7 @@ Every generated project includes:
 - `cmd/completion.go` -- shell completion scripts (self-registers via `init()`)
 - Configuration loading from TOML files, `.env` files, and environment variables
 - `build/version.go` with `Version` and `Date` injected via `-ldflags`
-- `Taskfile.yml` with build, test, and lint tasks (AMD64 + ARM64, CGO_ENABLED=0)
+- `Taskfile.yml` with `build`/`build-local` (AMD64 + ARM64, CGO_ENABLED=0), `test`, `test:race`, `lint`, `vet`, `tidy`, `check` (vet+lint+test:race), and `release` (tag + push, gated on `check`+`build`)
 - `<app-name>-config.toml` with a `[log]` section
 
 New CLI commands can be added post-scaffold with `go-scaffolder add cli-command`.
@@ -53,17 +53,24 @@ New MCP tools can be added post-scaffold with `go-scaffolder add mcp-tool`.
 
 Web frontend using Vite, TailwindCSS, AlpineJS, and TypeScript.
 
+**Automatically enables API** -- the built frontend is only reachable through the API's HTTP server, so selecting UI always pulls in the API feature too (selecting UI alone generates both). This mirrors how Nomad always pulls in Docker.
+
 Generated files:
 
+- `cmd/routes/ui_routes.go` -- serves `web/dist` at `/static/` and renders `web/templates/base.html` at `GET /` (self-registers via `init()`)
 - `web/embed.go` -- `go:embed` for static assets and templates
-- `web/src/main.ts` -- AlpineJS entry point
-- `web/src/style.css` -- TailwindCSS import
-- `web/templates/base.html` -- base HTML template
-- `web/package.json` -- with bun as package manager and Tailwind Vite plugin dependency
-- `web/vite.config.ts` -- Vite configuration with `@tailwindcss/vite`
+- `web/src/main.ts` -- AlpineJS entry point, with `@alpinejs/focus` for modal focus-trapping and system/dark/light theme handling (`applyTheme`/`cycleTheme`, persisted to `localStorage`)
+- `web/src/style.css` -- TailwindCSS import, `dark:` variant wired to a `.dark` class on `<html>`
+- `web/templates/base.html` -- base HTML template with a pre-paint theme script (avoids a flash of the wrong theme) and a theme-toggle button
+- `web/package.json` -- bun as package manager, `alpinejs` + `@alpinejs/focus`, Tailwind Vite plugin, and `@types/alpinejs`/`@types/alpinejs__focus` dev dependencies
+- `web/tsconfig.json` -- strict TypeScript config for the frontend
+- `web/vite.config.ts` -- Vite configuration with `@tailwindcss/vite`, `emptyOutDir: true`, and flat `dist/app.js`/`dist/style.css` output (no hashed `assets/` subfolder, matching what `web/embed.go` embeds and `base.html` references)
 - `web/dist/.gitkeep` -- placeholder until first frontend build
 
-Config additions: `frontend-build` task added to `Taskfile.yml`.
+Config additions:
+
+- `Taskfile.yml`'s `build` and `build-local` tasks depend on a new `frontend-build` task, since the frontend is embedded into the Go binary and must exist before compiling
+- `frontend-build` passes the same git-derived `VERSION` used for the Go binary's `-ldflags` into the frontend build as `VITE_APP_VERSION`, so `import.meta.env.VITE_APP_VERSION` in `main.ts` matches `build.Version` at runtime -- `package.json`'s own `"version"` field is left untouched (no file mutation on every build)
 
 When combined with Docker, the Dockerfile includes a frontend build stage.
 
@@ -133,6 +140,7 @@ Generated code initializes `dns.NewDNSResolver` in DB and Cache connection setup
 
 | If you select... | Then also included... |
 |------------------|-----------------------|
+| UI | API |
 | Nomad | Docker |
 | DB, Cache, or API | SRV Resolution (`internal/resolve/`) |
 | (any selection) | CLI (always) |

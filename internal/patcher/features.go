@@ -116,6 +116,18 @@ func mcpPatches(cfg *config.ProjectConfig) []Patch {
 func uiPatches(cfg *config.ProjectConfig) []Patch {
 	return []Patch{
 		{
+			File:        "Taskfile.yml",
+			Marker:      "desc: Build the application",
+			Content:     "    deps: [frontend-build]",
+			Description: "Build the frontend before the app build (it's embedded)",
+		},
+		{
+			File:        "Taskfile.yml",
+			Marker:      "desc: Build for local platform",
+			Content:     "    deps: [frontend-build]",
+			Description: "Build the frontend before the local build (it's embedded)",
+		},
+		{
 			File:   "Taskfile.yml",
 			Marker: "# go-scaffolder:taskfile-tasks",
 			Content: `
@@ -124,7 +136,7 @@ func uiPatches(cfg *config.ProjectConfig) []Patch {
     dir: web
     cmds:
       - bun install
-      - bun run build`,
+      - VITE_APP_VERSION="{{.VERSION}}" bun run build`,
 			Description: "Add frontend-build task",
 		},
 	}

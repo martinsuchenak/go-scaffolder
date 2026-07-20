@@ -352,35 +352,22 @@ func runEnableFeature(ctx context.Context, cmd *cli.Command) error {
 		}
 	}
 
-	if feature == "nomad" {
-		cfg.Features.Nomad = true
-		cfg.Features.Docker = true
-	}
+	before := cfg.Features
 
-	switch feature {
-	case "api":
-		cfg.Features.API = true
-	case "mcp":
-		cfg.Features.MCP = true
-	case "ui":
-		cfg.Features.UI = true
-	case "db":
-		cfg.Features.DB = true
-	case "cache":
-		cfg.Features.Cache = true
-	case "docker":
-		cfg.Features.Docker = true
-	case "nomad":
-		cfg.Features.Nomad = true
+	if !config.EnableFeature(&cfg.Features, feature) {
+		return fmt.Errorf("unknown feature: %s", feature)
 	}
+	config.ResolveFeatures(&cfg.Features)
+
+	// featuresToRender includes the requested feature plus any it cascaded
+	// on (e.g. ui -> api), so their files/patches are applied together.
+	featuresToRender := config.NewlyEnabledFeatures(before, cfg.Features)
 
 	eng := engine.New(templates.FS)
 
 	var allEntries []engine.TemplateEntry
-
-	entries := eng.EnableFeatureManifest(feature)
-	if entries != nil {
-		allEntries = append(allEntries, entries...)
+	for _, f := range featuresToRender {
+		allEntries = append(allEntries, eng.EnableFeatureManifest(f)...)
 	}
 
 	if feature == "cache" {
@@ -408,7 +395,10 @@ func runEnableFeature(ctx context.Context, cmd *cli.Command) error {
 			}
 		}
 
-		patches := patcher.FeaturePatches(feature, cfg)
+		var patches []patcher.Patch
+		for _, f := range featuresToRender {
+			patches = append(patches, patcher.FeaturePatches(f, cfg)...)
+		}
 		if len(patches) > 0 {
 			computed := patcher.ComputePatches(".", patches)
 			for _, cp := range computed {
@@ -446,7 +436,10 @@ func runEnableFeature(ctx context.Context, cmd *cli.Command) error {
 		}
 	}
 
-	patches := patcher.FeaturePatches(feature, cfg)
+	var patches []patcher.Patch
+	for _, f := range featuresToRender {
+		patches = append(patches, patcher.FeaturePatches(f, cfg)...)
+	}
 	if len(patches) > 0 {
 		results := patcher.ApplyPatches(".", patches)
 		patcher.ReportResults(results)
@@ -464,8 +457,22 @@ func runEnableFeature(ctx context.Context, cmd *cli.Command) error {
 		fmt.Println("Dependencies resolved successfully.")
 	}
 
-	fmt.Printf("\nFeature %q enabled successfully!\n", feature)
+	if extra := extraFeatures(feature, featuresToRender); len(extra) > 0 {
+		fmt.Printf("\nFeature %q enabled successfully! (also enabled: %s)\n", feature, strings.Join(extra, ", "))
+	} else {
+		fmt.Printf("\nFeature %q enabled successfully!\n", feature)
+	}
 	return nil
+}
+
+func extraFeatures(requested string, resolved []string) []string {
+	var extra []string
+	for _, f := range resolved {
+		if f != requested {
+			extra = append(extra, f)
+		}
+	}
+	return extra
 }
 
 func runAdd(ctx context.Context, cmd *cli.Command, addType string, requiredFeature string) error {

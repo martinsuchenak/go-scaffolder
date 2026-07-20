@@ -81,7 +81,7 @@ cache_type: redis
 |---------|-------------|
 | API | HTTP REST API with health/metrics endpoints, sample CRUD, auth middleware |
 | MCP | Model Context Protocol server with a sample tool |
-| UI | Vite + TailwindCSS + AlpineJS + TypeScript frontend with `go:embed` |
+| UI | Vite + TailwindCSS + AlpineJS + TypeScript frontend with `go:embed`, served over HTTP (auto-enables API) |
 | DB | Database layer with PostgreSQL, MySQL, or SQLite support |
 | Cache | Redis or Valkey client integration |
 | Docker | Multi-stage Dockerfile (includes frontend build stage when UI enabled) |

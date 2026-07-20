@@ -46,7 +46,7 @@ cache_type: redis      # redis | valkey
 |---------|-------------|
 | `api` | HTTP REST API |
 | `mcp` | Model Context Protocol server |
-| `ui` | Web frontend (Vite + TailwindCSS + AlpineJS) |
+| `ui` | Web frontend (Vite + TailwindCSS + AlpineJS). Automatically enables `api` too, since the built frontend is only served over the API's HTTP server. |
 | `db` | Database persistence |
 | `cache` | Cache integration (Redis or Valkey) |
 | `docker` | Dockerfile generation |

@@ -1,0 +1,30 @@
+package routes
+
+import (
+	"html/template"
+	"net/http"
+
+	"{{.ModulePath}}/build"
+	"{{.ModulePath}}/web"
+)
+
+var uiTemplate = template.Must(template.ParseFS(web.TemplateFiles, "templates/*.html"))
+
+func init() {
+	Register(registerUIRoutes)
+}
+
+func registerUIRoutes(mux *http.ServeMux) {
+	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServerFS(web.StaticFiles)))
+
+	mux.HandleFunc("GET /{$}", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		data := struct {
+			Title   string
+			Version string
+		}{Title: "{{.AppName}}", Version: build.Version}
+		if err := uiTemplate.ExecuteTemplate(w, "base.html", data); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+	})
+}

@@ -4,17 +4,33 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{`{{.Title}}`}} - {{.AppName}}</title>
+    <script>
+      // Apply the saved theme before first paint to avoid a flash.
+      (function () {
+        try {
+          var t = localStorage.getItem('theme') || 'system';
+          var dark = t === 'dark' || (t === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+          var el = document.documentElement;
+          el.classList.toggle('dark', dark);
+          el.classList.toggle('light', !dark);
+        } catch (e) { }
+      })();
+    </script>
     <link rel="stylesheet" href="/static/dist/style.css">
 </head>
-<body x-data="app()" class="min-h-screen bg-gray-100">
-    <nav class="bg-white shadow">
-        <div class="max-w-7xl mx-auto px-4 py-3">
-            <h1 class="text-xl font-bold">{{.AppName}}</h1>
+<body x-data="app()" x-init="init()" class="min-h-screen bg-gray-100 text-gray-900 dark:bg-zinc-900 dark:text-zinc-100">
+    <nav class="border-b border-gray-200 bg-white dark:border-zinc-800 dark:bg-zinc-950">
+        <div class="mx-auto flex max-w-7xl items-center justify-between px-4 py-3">
+            <div class="flex items-baseline gap-2">
+                <h1 class="text-xl font-bold">{{.AppName}}</h1>
+                <span class="text-xs text-gray-400 dark:text-zinc-600">{{`{{.Version}}`}}</span>
+            </div>
+            <button type="button" @click="cycleTheme()" class="rounded-md border border-gray-300 px-3 py-1.5 text-sm capitalize dark:border-zinc-700" x-text="theme" :aria-label="'Theme: ' + theme + '. Click to change.'" title="Toggle theme"></button>
         </div>
     </nav>
     <main class="max-w-7xl mx-auto px-4 py-6">
         {{`{{block "content" .}}{{end}}`}}
     </main>
-    <script src="/static/dist/app.js"></script>
+    <script type="module" src="/static/dist/app.js"></script>
 </body>
 </html>

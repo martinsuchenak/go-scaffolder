@@ -1,0 +1,23 @@
+package routes
+
+import (
+	"net/http"
+	"net/http/httptest"
+	"testing"
+)
+
+func TestRegisterUIRoutes(t *testing.T) {
+	mux := http.NewServeMux()
+	registerUIRoutes(mux)
+
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", rec.Code)
+	}
+	if ct := rec.Header().Get("Content-Type"); ct != "text/html; charset=utf-8" {
+		t.Fatalf("expected html content type, got %q", ct)
+	}
+}

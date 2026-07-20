@@ -32,8 +32,10 @@ my-service/
 │   ├── routes/
 │   │   ├── api_routes.go           # Route registry + health/metrics endpoints
 │   │   ├── sample_routes.go        # Sample resource routes (self-registers via init())
+│   │   ├── ui_routes.go            # Serves web/dist at /static/, renders base.html at / (UI only)
 │   │   ├── api_routes_test.go
-│   │   └── sample_routes_test.go
+│   │   ├── sample_routes_test.go
+│   │   └── ui_routes_test.go
 │   └── mcp/
 │       ├── mcp.go                  # MCP server + tool registry
 │       ├── sample_tool.go          # Sample MCP tool (self-registers via init())
@@ -68,16 +70,17 @@ my-service/
 │       ├── resolve.go              # DNS SRV resolution
 │       └── resolve_test.go
 │
-└── web/                            # UI feature only
+└── web/                            # UI feature only (also enables API, see features.md)
     ├── embed.go                    # go:embed for assets
-    ├── package.json                # Frontend dependencies (bun, Vite, Tailwind)
-    ├── vite.config.ts              # Includes Tailwind's Vite plugin
+    ├── package.json                # Frontend dependencies (bun, Vite, Tailwind, Alpine + focus plugin)
+    ├── tsconfig.json                # Strict TypeScript config
+    ├── vite.config.ts              # Includes Tailwind's Vite plugin; flat dist/ output (no hashed assets/)
     ├── dist/.gitkeep               # Placeholder until first build
     ├── src/
-    │   ├── main.ts                 # AlpineJS entry point
-    │   └── style.css               # TailwindCSS
+    │   ├── main.ts                 # AlpineJS entry point + theme handling (system/dark/light)
+    │   └── style.css               # TailwindCSS, dark: variant wired to a .dark class
     └── templates/
-        └── base.html               # HTML base template
+        └── base.html               # HTML base template with pre-paint theme script
 ```
 
 ## Configuration
@@ -116,11 +119,16 @@ The generated `Taskfile.yml` includes:
 
 | Task | Description |
 |------|-------------|
-| `task build` | Cross-compile for linux/darwin amd64+arm64 with CGO_ENABLED=0 |
-| `task build-local` | Build for the local platform |
+| `task build` | Cross-compile for linux/darwin amd64+arm64 with CGO_ENABLED=0 (depends on `frontend-build` when UI enabled) |
+| `task build-local` | Build for the local platform (depends on `frontend-build` when UI enabled) |
 | `task test` | Run `go test ./...` |
+| `task test:race` | Run `go test ./... -race` |
 | `task lint` | Run `golangci-lint` |
-| `task frontend-build` | Build frontend assets with bun (UI feature only) |
+| `task vet` | Run `go vet ./...` |
+| `task tidy` | Run `go mod tidy && go mod verify` |
+| `task check` | Full CI gate: `vet` + `lint` + `test:race` |
+| `task release` | Tag and push (`task release -- v0.1.0`), gated on `check` + `build` and a clean working tree |
+| `task frontend-build` | Build frontend assets with bun, passing `VITE_APP_VERSION` (UI feature only) |
 
 ## Running the Generated App
 

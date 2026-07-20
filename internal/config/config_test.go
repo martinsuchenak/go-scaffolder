@@ -34,6 +34,9 @@ func TestProperty1_FeatureResolutionInvariants(t *testing.T) {
 		if fs.Nomad && !fs.Docker {
 			t.Fatal("if Nomad is true, Docker must also be true after ResolveFeatures")
 		}
+		if fs.UI && !fs.API {
+			t.Fatal("if UI is true, API must also be true after ResolveFeatures, since the built frontend is only served over the api's HTTP server")
+		}
 	})
 }
 

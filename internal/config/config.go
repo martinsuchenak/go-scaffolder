@@ -76,6 +76,11 @@ func ResolveFeatures(fs *FeatureSet) {
 	if fs.Nomad {
 		fs.Docker = true
 	}
+	if fs.UI {
+		// The UI's built frontend is only reachable through the HTTP server
+		// that the api feature provides.
+		fs.API = true
+	}
 }
 
 func EnableFeature(fs *FeatureSet, name string) bool {
@@ -98,6 +103,20 @@ func EnableFeature(fs *FeatureSet, name string) bool {
 		return false
 	}
 	return true
+}
+
+// NewlyEnabledFeatures returns the SelectableFeatures names that are enabled
+// in after but not in before, e.g. to discover features ResolveFeatures
+// cascaded on (ui -> api, nomad -> docker) in addition to the one explicitly
+// requested.
+func NewlyEnabledFeatures(before, after FeatureSet) []string {
+	var names []string
+	for _, name := range SelectableFeatures {
+		if !before.HasFeature(name) && after.HasFeature(name) {
+			names = append(names, name)
+		}
+	}
+	return names
 }
 
 func ExpandFeatureNames(names []string) []string {

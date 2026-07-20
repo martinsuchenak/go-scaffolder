@@ -1,18 +1,53 @@
 import Alpine from 'alpinejs';
+import focus from '@alpinejs/focus';
+
+type Theme = 'dark' | 'light' | 'system';
+
+interface AppState {
+  message: string;
+  theme: Theme;
+  version: string;
+  init(): void;
+  applyTheme(): void;
+  cycleTheme(): void;
+}
 
 declare global {
   interface Window {
     Alpine: typeof Alpine;
-    app: () => object;
+    app: () => AppState;
   }
 }
 
-window.app = () => ({
+window.app = (): AppState => ({
   message: 'Welcome to {{.AppName}}',
+  theme: (localStorage.getItem('theme') as Theme) || 'system',
+  // Set at build time from the Go binary's VERSION (see Taskfile.yml's frontend-build task).
+  version: import.meta.env.VITE_APP_VERSION || 'dev',
+
   init() {
-    console.log('{{.AppName}} frontend initialized');
+    console.log('{{.AppName}} frontend initialized', this.version);
+    this.applyTheme();
+    if (window.matchMedia) {
+      window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+        if (this.theme === 'system') this.applyTheme();
+      });
+    }
+  },
+
+  // ---- theme ----
+  applyTheme() {
+    const dark = this.theme === 'dark' || (this.theme === 'system' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    document.documentElement.classList.toggle('dark', dark);
+    document.documentElement.classList.toggle('light', !dark);
+  },
+  cycleTheme() {
+    this.theme = this.theme === 'dark' ? 'light' : this.theme === 'light' ? 'system' : 'dark';
+    localStorage.setItem('theme', this.theme);
+    this.applyTheme();
   },
 });
 
+Alpine.plugin(focus);
 window.Alpine = Alpine;
 Alpine.start();

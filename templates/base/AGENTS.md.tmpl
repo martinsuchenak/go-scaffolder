@@ -91,6 +91,7 @@ task build
 task build-local
 task test
 task lint
+task check   # full CI gate: vet + lint + test:race
 ```
 
 ## Feature-Specific Commands
@@ -134,6 +135,8 @@ go run . completion --shell bash
 - Vite is used for frontend builds.
 - Tailwind CSS is integrated through `@tailwindcss/vite`.
 - The main frontend entrypoints are `web/src/main.ts` and `web/src/style.css`.
+- `cmd/routes/ui_routes.go` serves the built `web/dist` at `/static/` and renders `web/templates/base.html` at `/`; `task build`/`task build-local` run `frontend-build` first since the frontend is embedded into the Go binary.
+- System/dark/light theme handling lives in `main.ts` (`applyTheme`/`cycleTheme`), persisted to `localStorage`.
 {{- end}}
 
 ## Testing Expectations

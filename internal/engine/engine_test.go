@@ -325,9 +325,15 @@ func TestProperty8_TaskfileTasks(t *testing.T) {
 			if !strings.Contains(taskfile, "frontend-build:") {
 				t.Fatal("Taskfile should contain frontend-build task when UI enabled")
 			}
+			if strings.Count(taskfile, "deps: [frontend-build]") != 2 {
+				t.Fatal("build and build-local should both depend on frontend-build when UI enabled, since the frontend is embedded into the binary")
+			}
 		} else {
 			if strings.Contains(taskfile, "frontend-build:") {
 				t.Fatal("Taskfile should NOT contain frontend-build task when UI disabled")
+			}
+			if strings.Contains(taskfile, "deps: [frontend-build]") {
+				t.Fatal("Taskfile should NOT reference frontend-build deps when UI disabled")
 			}
 		}
 	})

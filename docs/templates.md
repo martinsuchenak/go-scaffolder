@@ -34,7 +34,8 @@ templates/
 │   └── cmd/mcp/
 │       ├── mcp.go.tmpl         #   Server + tool registry
 │       └── sample_tool.go.tmpl #   Self-registers via init()
-├── ui/                         # UI feature
+├── ui/                         # UI feature (also enables API)
+│   ├── cmd/routes/ui_routes.go.tmpl # Serves web/dist at /static/, renders base.html at /
 │   └── web/...
 ├── db/                         # DB feature
 │   └── internal/db/...

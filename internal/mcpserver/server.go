@@ -308,33 +308,22 @@ func handleEnableFeature(ctx context.Context, req *mcp.ToolRequest, rootDir stri
 		cfg.CacheType = config.CacheType(cacheType)
 	}
 
-	switch feature {
-	case "api":
-		cfg.Features.API = true
-	case "mcp":
-		cfg.Features.MCP = true
-	case "ui":
-		cfg.Features.UI = true
-	case "db":
-		cfg.Features.DB = true
-	case "cache":
-		cfg.Features.Cache = true
-	case "docker":
-		cfg.Features.Docker = true
-	case "nomad":
-		cfg.Features.Nomad = true
-		cfg.Features.Docker = true
-	default:
+	before := cfg.Features
+	if !config.EnableFeature(&cfg.Features, feature) {
 		return nil, fmt.Errorf("unknown feature: %s", feature)
 	}
+	config.ResolveFeatures(&cfg.Features)
+
+	// featuresToRender includes the requested feature plus any it cascaded
+	// on (e.g. ui -> api), so their files/patches are applied together.
+	featuresToRender := config.NewlyEnabledFeatures(before, cfg.Features)
 
 	eng := engine.New(templates.FS)
 	var buf bytes.Buffer
 
 	var allEntries []engine.TemplateEntry
-	entries := eng.EnableFeatureManifest(feature)
-	if entries != nil {
-		allEntries = append(allEntries, entries...)
+	for _, f := range featuresToRender {
+		allEntries = append(allEntries, eng.EnableFeatureManifest(f)...)
 	}
 	if feature == "cache" {
 		allEntries = append(allEntries, eng.EnableFeatureCacheManifest(cfg.CacheType)...)
@@ -365,7 +354,10 @@ func handleEnableFeature(ctx context.Context, req *mcp.ToolRequest, rootDir stri
 		}
 	}
 
-	patches := patcher.FeaturePatches(feature, cfg)
+	var patches []patcher.Patch
+	for _, f := range featuresToRender {
+		patches = append(patches, patcher.FeaturePatches(f, cfg)...)
+	}
 	if len(patches) > 0 {
 		if projectDir != "" {
 			computed := patcher.ComputePatches(projectDir, patches)

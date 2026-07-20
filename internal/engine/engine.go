@@ -88,9 +88,11 @@ func (e *Engine) TemplateManifest() []TemplateEntry {
 		{TemplatePath: "mcp/cmd/mcp/sample_tool.go.tmpl", OutputPath: "cmd/mcp/sample_tool.go", RequiredFeatures: []string{"mcp"}},
 
 		// UI feature
+		{TemplatePath: "ui/cmd/routes/ui_routes.go.tmpl", OutputPath: "cmd/routes/ui_routes.go", RequiredFeatures: []string{"ui"}},
 		{TemplatePath: "ui/web/embed.go.tmpl", OutputPath: "web/embed.go", RequiredFeatures: []string{"ui"}},
 		{TemplatePath: "ui/web/templates/base.html.tmpl", OutputPath: "web/templates/base.html", RequiredFeatures: []string{"ui"}},
 		{TemplatePath: "ui/web/package.json.tmpl", OutputPath: "web/package.json", RequiredFeatures: []string{"ui"}},
+		{TemplatePath: "ui/web/tsconfig.json.tmpl", OutputPath: "web/tsconfig.json", RequiredFeatures: []string{"ui"}},
 		{TemplatePath: "ui/web/dist/.gitkeep.tmpl", OutputPath: "web/dist/.gitkeep", RequiredFeatures: []string{"ui"}},
 		{TemplatePath: "ui/web/src/main.ts.tmpl", OutputPath: "web/src/main.ts", RequiredFeatures: []string{"ui"}},
 		{TemplatePath: "ui/web/src/style.css.tmpl", OutputPath: "web/src/style.css", RequiredFeatures: []string{"ui"}},
@@ -134,6 +136,9 @@ func (e *Engine) TemplateManifest() []TemplateEntry {
 		// Test file templates - MCP
 		{TemplatePath: "tests/mcp/cmd/mcp/mcp_test.go.tmpl", OutputPath: "cmd/mcp/mcp_test.go", RequiredFeatures: []string{"mcp"}},
 		{TemplatePath: "tests/mcp/cmd/mcp/sample_tool_test.go.tmpl", OutputPath: "cmd/mcp/sample_tool_test.go", RequiredFeatures: []string{"mcp"}},
+
+		// Test file templates - UI
+		{TemplatePath: "tests/ui/cmd/routes/ui_routes_test.go.tmpl", OutputPath: "cmd/routes/ui_routes_test.go", RequiredFeatures: []string{"ui"}},
 
 		// Test file templates - DB
 		{TemplatePath: "tests/db/internal/db/db_test.go.tmpl", OutputPath: "internal/db/db_test.go", RequiredFeatures: []string{"db"}},
@@ -281,13 +286,16 @@ func (e *Engine) EnableFeatureManifest(feature string) []TemplateEntry {
 		}
 	case "ui":
 		return []TemplateEntry{
+			{TemplatePath: "ui/cmd/routes/ui_routes.go.tmpl", OutputPath: "cmd/routes/ui_routes.go"},
 			{TemplatePath: "ui/web/embed.go.tmpl", OutputPath: "web/embed.go"},
 			{TemplatePath: "ui/web/templates/base.html.tmpl", OutputPath: "web/templates/base.html"},
 			{TemplatePath: "ui/web/package.json.tmpl", OutputPath: "web/package.json"},
+			{TemplatePath: "ui/web/tsconfig.json.tmpl", OutputPath: "web/tsconfig.json"},
 			{TemplatePath: "ui/web/dist/.gitkeep.tmpl", OutputPath: "web/dist/.gitkeep"},
 			{TemplatePath: "ui/web/src/main.ts.tmpl", OutputPath: "web/src/main.ts"},
 			{TemplatePath: "ui/web/src/style.css.tmpl", OutputPath: "web/src/style.css"},
 			{TemplatePath: "ui/web/vite.config.ts.tmpl", OutputPath: "web/vite.config.ts"},
+			{TemplatePath: "tests/ui/cmd/routes/ui_routes_test.go.tmpl", OutputPath: "cmd/routes/ui_routes_test.go"},
 		}
 	case "db":
 		return []TemplateEntry{
