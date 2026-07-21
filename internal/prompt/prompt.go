@@ -123,8 +123,8 @@ func ValidateResourceName(s string) error {
 	return nil
 }
 
-var FeatureOptions = []string{"API", "MCP", "UI", "DB", "Cache", "Docker", "Nomad"}
-var FeatureSelectionOptions = []string{"All", "API", "MCP", "UI", "DB", "Cache", "Docker", "Nomad"}
+var FeatureOptions = []string{"API", "MCP", "UI", "DB", "Cache", "Docker", "Nomad", "CI", "Otel"}
+var FeatureSelectionOptions = []string{"All", "API", "MCP", "UI", "DB", "Cache", "Docker", "Nomad", "CI", "Otel"}
 var DBTypeOptions = []string{"mysql", "postgresql", "sqlite"}
 var CacheTypeOptions = []string{"redis", "valkey"}
 
