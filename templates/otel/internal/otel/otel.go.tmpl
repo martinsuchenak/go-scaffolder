@@ -1,0 +1,74 @@
+package otel
+
+import (
+	"context"
+	"errors"
+	"fmt"
+
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
+	"go.opentelemetry.io/otel/propagation"
+	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/resource"
+	"go.opentelemetry.io/otel/sdk/trace"
+	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
+)
+
+// InitProvider sets up OpenTelemetry tracing and metrics.
+// It returns a shutdown function that should be deferred.
+func InitProvider(ctx context.Context, serviceName, serviceVersion string) (func(context.Context) error, error) {
+	var shutdownFuncs []func(context.Context) error
+
+	shutdown := func(ctx context.Context) error {
+		var err error
+		for _, fn := range shutdownFuncs {
+			err = errors.Join(err, fn(ctx))
+		}
+		shutdownFuncs = nil
+		return err
+	}
+
+	res, err := resource.Merge(
+		resource.Default(),
+		resource.NewWithAttributes(
+			semconv.SchemaURL,
+			semconv.ServiceName(serviceName),
+			semconv.ServiceVersion(serviceVersion),
+		),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create resource: %w", err)
+	}
+
+	// Trace provider
+	traceExporter, err := otlptracegrpc.New(ctx, otlptracegrpc.WithInsecure())
+	if err != nil {
+		return shutdown, fmt.Errorf("failed to create trace exporter: %w", err)
+	}
+
+	bsp := trace.NewBatchSpanProcessor(traceExporter)
+	tracerProvider := trace.NewTracerProvider(
+		trace.WithSampler(trace.AlwaysSample()),
+		trace.WithResource(res),
+		trace.WithSpanProcessor(bsp),
+	)
+	otel.SetTracerProvider(tracerProvider)
+	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}, propagation.Baggage{}))
+	shutdownFuncs = append(shutdownFuncs, tracerProvider.Shutdown)
+
+	// Meter provider
+	metricExporter, err := otlpmetricgrpc.New(ctx, otlpmetricgrpc.WithInsecure())
+	if err != nil {
+		return shutdown, fmt.Errorf("failed to create metric exporter: %w", err)
+	}
+
+	meterProvider := metric.NewMeterProvider(
+		metric.WithResource(res),
+		metric.WithReader(metric.NewPeriodicReader(metricExporter)),
+	)
+	otel.SetMeterProvider(meterProvider)
+	shutdownFuncs = append(shutdownFuncs, meterProvider.Shutdown)
+
+	return shutdown, nil
+}

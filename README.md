@@ -6,12 +6,12 @@ A CLI tool that generates fully functional Go microservice projects. Ships as a 
 
 - **Interactive mode** — prompts for app name, output directory, and feature selection
 - **Config file mode** — reads all parameters from a YAML file (`--config`) for scripted/CI usage
-- **Selectable features** — CLI, API, MCP, UI, DB, Cache, Docker, Nomad, plus an `all` shortcut in interactive/config flows
+- **Selectable features** — CLI, API, MCP, UI, DB, Cache, Docker, Nomad, CI, Otel, plus an `all` shortcut in interactive/config flows
 - **Database support** — PostgreSQL, MySQL, SQLite with optional `xdal` abstraction for swappable DB backends
 - **Cache support** — Redis or Valkey with client initialization
 - **DNS SRV resolution** — auto-generated `internal/resolve/` package when networking features are enabled
 - **Test file generation** — every source file gets a corresponding `_test.go`
-- **Project hygiene files** — generates a standard `.gitignore` and `AGENTS.md`
+- **Project hygiene files** — generates a standard `.gitignore`, `TODO.md`, and `AGENTS.md`
 - **Post-generation** — runs `go mod tidy` to resolve all dependencies
 
 ## Requirements
@@ -49,7 +49,7 @@ You will be prompted for:
 1. App name
 2. Module path (e.g. `github.com/yourorg/my-service`, defaults to app name)
 3. Output directory
-4. Features (`All`, API, MCP, UI, DB, Cache, Docker, Nomad)
+4. Features (`All`, API, MCP, UI, DB, Cache, Docker, Nomad, CI, Otel)
 5. DB type and optional `xdal` abstraction (if DB selected)
 6. Cache type (if Cache selected)
 
@@ -70,6 +70,8 @@ features:
   - db
   - cache
   - docker
+  - ci
+  - otel
 db_type: postgresql
 use_xdal: true
 cache_type: redis
@@ -86,6 +88,8 @@ cache_type: redis
 | Cache | Redis or Valkey client integration |
 | Docker | Multi-stage Dockerfile (includes frontend build stage when UI enabled) |
 | Nomad | HashiCorp Nomad job definition (automatically includes Docker) |
+| CI | GitHub Actions workflow for linting, testing, and building |
+| Otel | OpenTelemetry initialization for tracing and metrics |
 
 CLI is always included regardless of selection.
 
@@ -165,7 +169,7 @@ When `--token` is set (or `MCP_TOKEN` env var), all requests must include an `Au
 | `add_cli_command` | Add a CLI command to an existing project |
 | `add_api_endpoint` | Add an API endpoint resource |
 | `add_mcp_tool` | Add an MCP tool |
-| `enable_feature` | Enable a feature (api, mcp, ui, db, cache, docker, nomad) |
+| `enable_feature` | Enable a feature (api, mcp, ui, db, cache, docker, nomad, ci, otel) |
 | `project_context` | Generate project context summary for LLM consumption |
 
 All tools return unified diff output. The server uses the `github.com/paularlott/mcp` library and serves on the `/mcp` endpoint.
@@ -183,8 +187,10 @@ If neither is provided, the server looks for `.go-scaffolder.yaml` in its workin
 
 ```
 my-service/
+├── .github/                 # GitHub Actions workflows (when CI enabled)
 ├── main.go                  # CLI entry point using paularlott/cli
 ├── .gitignore               # Standard ignore rules for Go and optional UI assets
+├── TODO.md                  # Next steps to finalize boilerplate implementations
 ├── AGENTS.md                # Project guidance for future coding agents and contributors
 ├── go.mod
 ├── build/version.go         # Build version/date injected via ldflags
@@ -205,6 +211,7 @@ my-service/
 │   ├── db/                  # DB init + schema, optionally wrapped with xdal (when DB enabled)
 │   ├── redis/               # Redis client (when Cache=Redis)
 │   ├── valkey/              # Valkey client (when Cache=Valkey)
+│   ├── otel/                # OpenTelemetry initialization (when Otel enabled)
 │   └── resolve/             # DNS SRV resolution (when DB, Cache, or API enabled)
 ├── web/                     # Frontend project (when UI enabled)
 ├── openapi.yaml             # OpenAPI v3.1 spec (when API enabled)

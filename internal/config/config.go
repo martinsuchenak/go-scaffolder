@@ -20,7 +20,7 @@ const (
 	CacheValkey CacheType = "valkey"
 )
 
-var SelectableFeatures = []string{"api", "mcp", "ui", "db", "cache", "docker", "nomad"}
+var SelectableFeatures = []string{"api", "mcp", "ui", "db", "cache", "docker", "nomad", "ci", "otel"}
 
 type FeatureSet struct {
 	CLI    bool
@@ -31,6 +31,8 @@ type FeatureSet struct {
 	Cache  bool
 	Docker bool
 	Nomad  bool
+	CI     bool
+	Otel   bool
 }
 
 type ProjectConfig struct {
@@ -67,6 +69,10 @@ func (fs *FeatureSet) HasFeature(name string) bool {
 		return fs.Docker
 	case "nomad":
 		return fs.Nomad
+	case "ci":
+		return fs.CI
+	case "otel":
+		return fs.Otel
 	}
 	return false
 }
@@ -99,6 +105,10 @@ func EnableFeature(fs *FeatureSet, name string) bool {
 		fs.Docker = true
 	case "nomad":
 		fs.Nomad = true
+	case "ci":
+		fs.CI = true
+	case "otel":
+		fs.Otel = true
 	default:
 		return false
 	}

@@ -123,6 +123,24 @@ HashiCorp Nomad job definition.
 - Includes health check via `/health` endpoint
 - **Automatically includes Docker** -- selecting Nomad always enables Docker
 
+## CI
+
+GitHub Actions workflow for continuous integration.
+
+Generated files:
+
+- `.github/workflows/ci.yml` -- Workflow that runs `task lint`, `task test`, and optionally builds the Docker image (if the `docker` feature is enabled).
+
+## Otel
+
+OpenTelemetry initialization for distributed tracing and metrics.
+
+Generated files:
+
+- `internal/otel/otel.go` -- Initializes OpenTelemetry provider with `otlptracegrpc` and `otlpmetricgrpc` exporters.
+
+Configures the `serve` command to automatically initialize OpenTelemetry on startup and gracefully shut it down on exit.
+
 ## SRV Resolution
 
 Not a user-selectable feature. Automatically included when any of **DB**, **Cache**, or **API** is enabled.

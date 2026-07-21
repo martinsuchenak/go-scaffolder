@@ -1,0 +1,45 @@
+# Project TODOs
+
+Welcome to your newly scaffolded `{{.AppName}}` project! Here are the next steps to get your project fully production-ready based on the features you selected.
+
+{{- if .Features.API}}
+## API & Authentication
+- [ ] **Authentication**: The boilerplate provides middleware placeholders in `internal/auth/auth.go`. You need to implement the actual validation logic (e.g., JWT validation, OAuth 2.0 + PKCE, or OIDC) for the `BearerTokenMiddleware`.
+- [ ] **OpenAPI Spec**: Update `openapi.yaml` to match any new endpoints you add, or consider generating it automatically from code comments using tools like `swag`.
+{{- end}}
+
+{{- if .Features.UI}}
+## UI (Frontend)
+- [ ] **Branding & Theme**: Customize the Tailwind CSS theme in `web/src/style.css` and `web/tailwind.config.js` (if added) to match your brand.
+- [ ] **Assets**: Replace or add favicons and static assets in the `web/public` directory or directly in `web/src`.
+{{- end}}
+
+{{- if .Features.DB}}
+## Database
+- [ ] **Configuration**: Update the database credentials in `{{.AppName}}-config.toml` or set the appropriate environment variables.
+- [ ] **Schema Migrations**: The project provides a `internal/db/schema.sql` for initial setup. Consider adding a migration tool like `golang-migrate/migrate` or `pressly/goose` for managing schema evolution.
+{{- end}}
+
+{{- if .Features.Cache}}
+## Cache
+- [ ] **Configuration**: Update the cache connection details (host, port, password) in `{{.AppName}}-config.toml`.
+{{- end}}
+
+{{- if .Features.Docker}}
+## Docker
+- [ ] **Registry**: Update the Docker tag registry prefix in `Taskfile.yml` or your CI pipelines before pushing the image.
+{{- end}}
+
+{{- if .Features.Nomad}}
+## Nomad
+- [ ] **Deployment**: Review the `{{.AppName}}.nomad` job file. Adjust CPU/Memory constraints, network ports, and the Docker image name/tag before running `nomad job run`.
+{{- end}}
+
+{{- if .Features.Otel}}
+## Observability (OpenTelemetry)
+- [ ] **OTLP Endpoint**: The OpenTelemetry setup in `internal/otel/otel.go` defaults to `localhost:4317`. Set the `OTEL_EXPORTER_OTLP_ENDPOINT` environment variable in your deployment environment to point to your actual OTLP collector (e.g., Jaeger, Datadog, Honeycomb).
+{{- end}}
+
+## General
+- [ ] **Dependencies**: Run `go mod tidy` if you add any new imports. (This was run automatically during scaffolding).
+- [ ] **Tests**: Run `task test` to ensure all generated components pass their initial unit tests.

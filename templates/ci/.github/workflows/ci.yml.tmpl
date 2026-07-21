@@ -1,0 +1,78 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.26.x'
+
+    - name: Install Task
+      uses: arduino/setup-task@v2
+      with:
+        version: 3.x
+        repo-token: {{`${{ secrets.GITHUB_TOKEN }}`}}
+
+    - name: Verify dependencies
+      run: go mod verify
+
+    - name: Test
+      run: task test
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.26.x'
+
+    - name: golangci-lint
+      uses: golangci/golangci-lint-action@v4
+      with:
+        version: v1.63
+
+  build:
+    runs-on: ubuntu-latest
+    needs: [test, lint]
+    steps:
+    - uses: actions/checkout@v4
+{{- if .Features.Docker}}
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Build Docker Image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        push: false
+        tags: {{.AppName}}:latest
+{{- else}}
+
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.26.x'
+        
+    - name: Install Task
+      uses: arduino/setup-task@v2
+      with:
+        version: 3.x
+        repo-token: {{`${{ secrets.GITHUB_TOKEN }}`}}
+
+    - name: Build
+      run: task build
+{{- end}}

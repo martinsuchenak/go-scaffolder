@@ -59,6 +59,7 @@ func (e *Engine) TemplateManifest() []TemplateEntry {
 		// Base templates (always included)
 		{TemplatePath: "base/main.go.tmpl", OutputPath: "main.go", RequiredFeatures: nil},
 		{TemplatePath: "base/.gitignore.tmpl", OutputPath: ".gitignore", RequiredFeatures: nil},
+		{TemplatePath: "base/TODO.md.tmpl", OutputPath: "TODO.md", RequiredFeatures: nil},
 		{TemplatePath: "base/AGENTS.md.tmpl", OutputPath: "AGENTS.md", RequiredFeatures: nil},
 		{TemplatePath: "base/go.mod.tmpl", OutputPath: "go.mod", RequiredFeatures: nil},
 		{TemplatePath: "base/README.md.tmpl", OutputPath: "README.md", RequiredFeatures: nil},
@@ -114,6 +115,12 @@ func (e *Engine) TemplateManifest() []TemplateEntry {
 		// Nomad feature
 		{TemplatePath: "nomad/nomad.tmpl", OutputPath: "{{.AppName}}.nomad", RequiredFeatures: []string{"nomad"}},
 
+		// CI feature
+		{TemplatePath: "ci/.github/workflows/ci.yml.tmpl", OutputPath: ".github/workflows/ci.yml", RequiredFeatures: []string{"ci"}},
+
+		// Otel feature
+		{TemplatePath: "otel/internal/otel/otel.go.tmpl", OutputPath: "internal/otel/otel.go", RequiredFeatures: []string{"otel"}},
+
 		// Test file templates - base
 		{TemplatePath: "tests/base/build/version_test.go.tmpl", OutputPath: "build/version_test.go", RequiredFeatures: nil},
 
@@ -146,6 +153,9 @@ func (e *Engine) TemplateManifest() []TemplateEntry {
 		// Test file templates - Cache
 		{TemplatePath: "tests/cache/redis/internal/redis/redis_test.go.tmpl", OutputPath: "internal/redis/redis_test.go", RequiredFeatures: []string{"cache_redis"}},
 		{TemplatePath: "tests/cache/valkey/internal/valkey/valkey_test.go.tmpl", OutputPath: "internal/valkey/valkey_test.go", RequiredFeatures: []string{"cache_valkey"}},
+		
+		// Test file templates - Otel
+		{TemplatePath: "tests/otel/internal/otel/otel_test.go.tmpl", OutputPath: "internal/otel/otel_test.go", RequiredFeatures: []string{"otel"}},
 	}
 }
 
@@ -171,6 +181,10 @@ func (e *Engine) featureEnabled(cfg *config.ProjectConfig, feature string) bool 
 		return cfg.Features.Docker
 	case "nomad":
 		return cfg.Features.Nomad
+	case "ci":
+		return cfg.Features.CI
+	case "otel":
+		return cfg.Features.Otel
 	case "srv":
 		return cfg.Features.NeedsSRVResolve()
 	}
@@ -312,6 +326,15 @@ func (e *Engine) EnableFeatureManifest(feature string) []TemplateEntry {
 	case "nomad":
 		return []TemplateEntry{
 			{TemplatePath: "nomad/nomad.tmpl", OutputPath: "{{.AppName}}.nomad"},
+		}
+	case "ci":
+		return []TemplateEntry{
+			{TemplatePath: "ci/.github/workflows/ci.yml.tmpl", OutputPath: ".github/workflows/ci.yml"},
+		}
+	case "otel":
+		return []TemplateEntry{
+			{TemplatePath: "otel/internal/otel/otel.go.tmpl", OutputPath: "internal/otel/otel.go"},
+			{TemplatePath: "tests/otel/internal/otel/otel_test.go.tmpl", OutputPath: "internal/otel/otel_test.go"},
 		}
 	}
 	return nil

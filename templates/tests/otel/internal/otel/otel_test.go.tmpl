@@ -1,0 +1,24 @@
+package otel_test
+
+import (
+	"context"
+	"testing"
+	
+	"{{.ModulePath}}/internal/otel"
+)
+
+func TestInitProvider(t *testing.T) {
+	// Simple test to ensure it doesn't panic
+	shutdown, err := otel.InitProvider(context.Background(), "test-service", "1.0.0")
+	if err != nil {
+		t.Fatalf("failed to init otel provider: %v", err)
+	}
+	if shutdown == nil {
+		t.Fatal("shutdown function is nil")
+	}
+
+	if err := shutdown(context.Background()); err != nil {
+		// Log the error but don't fail the test because we might not have a real endpoint to dial for shutting down
+		t.Logf("shutdown returned error (expected without real endpoint): %v", err)
+	}
+}
