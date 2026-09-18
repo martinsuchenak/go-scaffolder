@@ -31,3 +31,7 @@ Thumbs.db
 .modcache/
 
 .npm-cache/
+
+# Skopos
+.skopos-session
+.skopos/
