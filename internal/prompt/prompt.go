@@ -98,10 +98,7 @@ func (p *TerminalPrompter) Confirm(label string) (bool, error) {
 }
 
 func ValidateAppName(s string) error {
-	if strings.TrimSpace(s) == "" {
-		return fmt.Errorf("app name must not be empty")
-	}
-	return nil
+	return config.ValidateAppName(s)
 }
 
 func ValidateOutputDir(s string) error {

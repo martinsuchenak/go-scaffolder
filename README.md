@@ -146,7 +146,7 @@ No files are written, no `go mod tidy` is run. The output is standard unified di
 The scaffolder can run as a remote MCP server, exposing all operations as tools for LLM consumption:
 
 ```sh
-# Start MCP server on default port
+# Start MCP server on default address (127.0.0.1:8080)
 go-scaffolder serve
 
 # Custom listen address
@@ -159,7 +159,7 @@ go-scaffolder serve --token my-secret-token
 MCP_TOKEN=my-secret-token go-scaffolder serve
 ```
 
-When `--token` is set (or `MCP_TOKEN` env var), all requests must include an `Authorization: Bearer <token>` header. Without it, no auth is required.
+When `--token` is set (or `MCP_TOKEN` env var), all requests must include an `Authorization: Bearer <token>` header. Without it, no auth is required, so the server listens on loopback only by default; pass `--listen :8080` together with `--token` to expose it.
 
 ### Available MCP tools
 

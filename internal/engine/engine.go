@@ -153,7 +153,7 @@ func (e *Engine) TemplateManifest() []TemplateEntry {
 		// Test file templates - Cache
 		{TemplatePath: "tests/cache/redis/internal/redis/redis_test.go.tmpl", OutputPath: "internal/redis/redis_test.go", RequiredFeatures: []string{"cache_redis"}},
 		{TemplatePath: "tests/cache/valkey/internal/valkey/valkey_test.go.tmpl", OutputPath: "internal/valkey/valkey_test.go", RequiredFeatures: []string{"cache_valkey"}},
-		
+
 		// Test file templates - Otel
 		{TemplatePath: "tests/otel/internal/otel/otel_test.go.tmpl", OutputPath: "internal/otel/otel_test.go", RequiredFeatures: []string{"otel"}},
 	}

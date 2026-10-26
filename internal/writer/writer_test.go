@@ -58,3 +58,31 @@ func TestWriteAllInvalidDir(t *testing.T) {
 		t.Fatal("expected error for invalid directory")
 	}
 }
+
+func TestWriteAllRejectsEscapingPaths(t *testing.T) {
+	for _, relPath := range []string{"../escape.txt", "a/../../escape.txt", "/abs/escape.txt"} {
+		t.Run(relPath, func(t *testing.T) {
+			dir := t.TempDir()
+			err := WriteAll(dir, map[string][]byte{relPath: []byte("x")})
+			if err == nil {
+				t.Fatalf("expected error for path %q", relPath)
+			}
+		})
+	}
+}
+
+func TestWriteAllRejectsSymlinkEscape(t *testing.T) {
+	dir := t.TempDir()
+	outside := t.TempDir()
+	if err := os.Symlink(outside, filepath.Join(dir, "link")); err != nil {
+		t.Skipf("symlinks unsupported: %v", err)
+	}
+
+	err := WriteAll(dir, map[string][]byte{"link/escape.txt": []byte("x")})
+	if err == nil {
+		t.Fatal("expected error writing through symlink that leaves the output directory")
+	}
+	if _, statErr := os.Stat(filepath.Join(outside, "escape.txt")); statErr == nil {
+		t.Fatal("file was written outside the output directory")
+	}
+}

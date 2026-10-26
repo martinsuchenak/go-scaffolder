@@ -27,7 +27,7 @@ Generated files:
 - `cmd/routes/api_routes.go` -- route registry with `GET /health`, `GET /metrics`, and self-registration support
 - `cmd/routes/sample_routes.go` -- sample resource routes (self-registers via `init()`)
 - `internal/rest/helpers.go` -- JSON response helpers
-- `internal/auth/auth.go` -- API key and Bearer token middleware placeholders
+- `internal/auth/auth.go` -- API key middleware (constant-time `X-API-Key` check) and a Bearer token middleware that rejects every request until you supply a `TokenValidator`
 - `internal/ctxkeys/ctxkeys.go` -- typed context keys
 - `internal/sample/` -- sample resource with Handler, Service, Storage layers
 - `openapi.yaml` -- OpenAPI v3.1 skeleton
@@ -113,6 +113,7 @@ Config additions: `[redis]` or `[valkey]` section.
 Multi-stage Dockerfile for containerization.
 
 - `CGO_ENABLED=0` static binary
+- Pinned `alpine` runtime image; the service runs as a non-root `app` user
 - When UI is also enabled, includes a frontend build stage using bun
 
 ## Nomad
@@ -129,7 +130,7 @@ GitHub Actions workflow for continuous integration.
 
 Generated files:
 
-- `.github/workflows/ci.yml` -- Workflow that runs `task lint`, `task test`, and optionally builds the Docker image (if the `docker` feature is enabled).
+- `.github/workflows/ci.yml` -- Workflow that runs golangci-lint and `task test`, then builds the Docker image (if the `docker` feature is enabled) or runs `task build`. Go is installed from the version in `go.mod`, and the workflow token is read-only.
 
 ## Otel
 
@@ -139,7 +140,7 @@ Generated files:
 
 - `internal/otel/otel.go` -- Initializes OpenTelemetry provider with `otlptracegrpc` and `otlpmetricgrpc` exporters.
 
-Configures the `serve` command to automatically initialize OpenTelemetry on startup and gracefully shut it down on exit.
+Configures the `serve` command to automatically initialize OpenTelemetry on startup (reporting `build.Version` as the service version) and gracefully shut it down on exit. Enabling `otel` later with `go-scaffolder add feature` patches `cmd/serve.go` the same way.
 
 ## SRV Resolution
 

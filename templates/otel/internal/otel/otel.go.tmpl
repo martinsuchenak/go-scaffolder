@@ -12,11 +12,12 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/sdk/trace"
-	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
 )
 
 // InitProvider sets up OpenTelemetry tracing and metrics.
-// It returns a shutdown function that should be deferred.
+// It returns a shutdown function that should be deferred. On error, any
+// providers that were already started are shut down before returning.
 func InitProvider(ctx context.Context, serviceName, serviceVersion string) (func(context.Context) error, error) {
 	var shutdownFuncs []func(context.Context) error
 
@@ -44,7 +45,7 @@ func InitProvider(ctx context.Context, serviceName, serviceVersion string) (func
 	// Trace provider
 	traceExporter, err := otlptracegrpc.New(ctx, otlptracegrpc.WithInsecure())
 	if err != nil {
-		return shutdown, fmt.Errorf("failed to create trace exporter: %w", err)
+		return nil, errors.Join(fmt.Errorf("failed to create trace exporter: %w", err), shutdown(ctx))
 	}
 
 	bsp := trace.NewBatchSpanProcessor(traceExporter)
@@ -60,7 +61,7 @@ func InitProvider(ctx context.Context, serviceName, serviceVersion string) (func
 	// Meter provider
 	metricExporter, err := otlpmetricgrpc.New(ctx, otlpmetricgrpc.WithInsecure())
 	if err != nil {
-		return shutdown, fmt.Errorf("failed to create metric exporter: %w", err)
+		return nil, errors.Join(fmt.Errorf("failed to create metric exporter: %w", err), shutdown(ctx))
 	}
 
 	meterProvider := metric.NewMeterProvider(

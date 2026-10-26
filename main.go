@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/paularlott/cli"
 
@@ -163,8 +164,8 @@ func serveCommand() *cli.Command {
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:         "listen",
-				Usage:        "Address to listen on",
-				DefaultValue: ":8080",
+				Usage:        "Address to listen on (use :8080 to listen on all interfaces)",
+				DefaultValue: "127.0.0.1:8080",
 				AssignTo:     &mcpListenAddr,
 			},
 			&cli.StringFlag{
@@ -193,8 +194,17 @@ func serveCommand() *cli.Command {
 			} else {
 				log.Printf("MCP server listening on %s (no auth)", mcpListenAddr)
 			}
-			http.HandleFunc("/mcp", handler)
-			return http.ListenAndServe(mcpListenAddr, nil)
+			mux := http.NewServeMux()
+			mux.HandleFunc("/mcp", handler)
+			srv := &http.Server{
+				Addr:              mcpListenAddr,
+				Handler:           mux,
+				ReadHeaderTimeout: 10 * time.Second,
+				ReadTimeout:       30 * time.Second,
+				IdleTimeout:       120 * time.Second,
+				MaxHeaderBytes:    1 << 20,
+			}
+			return srv.ListenAndServe()
 		},
 	}
 }
@@ -278,7 +288,7 @@ func addCommand() *cli.Command {
 func enableFeatureCommand() *cli.Command {
 	return &cli.Command{
 		Name:  "feature",
-		Usage: "Enable a feature (api, mcp, ui, db, cache, docker, nomad)",
+		Usage: "Enable a feature (" + strings.Join(config.SelectableFeatures, ", ") + ")",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:     "db-type",
@@ -300,8 +310,6 @@ func enableFeatureCommand() *cli.Command {
 	}
 }
 
-var enableableFeatures = []string{"api", "mcp", "ui", "db", "cache", "docker", "nomad"}
-
 func runEnableFeature(ctx context.Context, cmd *cli.Command) error {
 	cfg, err := configfile.LoadStateFile(configfile.StateFileName)
 	if err != nil {
@@ -311,7 +319,7 @@ func runEnableFeature(ctx context.Context, cmd *cli.Command) error {
 	p := prompt.NewTerminalPrompter()
 
 	var available []string
-	for _, f := range enableableFeatures {
+	for _, f := range config.SelectableFeatures {
 		if !cfg.Features.HasFeature(f) {
 			available = append(available, f)
 		}
@@ -358,6 +366,9 @@ func runEnableFeature(ctx context.Context, cmd *cli.Command) error {
 		return fmt.Errorf("unknown feature: %s", feature)
 	}
 	config.ResolveFeatures(&cfg.Features)
+	if err := cfg.Validate(); err != nil {
+		return fmt.Errorf("validation error: %w", err)
+	}
 
 	// featuresToRender includes the requested feature plus any it cascaded
 	// on (e.g. ui -> api), so their files/patches are applied together.

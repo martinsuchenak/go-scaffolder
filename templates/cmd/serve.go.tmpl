@@ -7,6 +7,9 @@ import (
 	"net/http"
 {{- end}}
 	"os"
+{{- if .Features.API}}
+	"time"
+{{- end}}
 
 	"github.com/paularlott/cli"
 	logslog "github.com/paularlott/logger/slog"
@@ -15,7 +18,8 @@ import (
 	"{{.ModulePath}}/cmd/routes"
 {{- end}}
 {{- if .Features.Otel}}
-	
+
+	"{{.ModulePath}}/build"
 	"{{.ModulePath}}/internal/otel"
 {{- end}}
 {{- if .Features.MCP}}
@@ -66,7 +70,7 @@ func serveCmd() *cli.Command {
 {{- if .Features.Otel}}
 
 			log.Info("initializing OpenTelemetry")
-			shutdownOtel, err := otel.InitProvider(ctx, "{{.AppName}}", "1.0.0")
+			shutdownOtel, err := otel.InitProvider(ctx, "{{.AppName}}", build.Version)
 			if err != nil {
 				log.Error("failed to initialize OpenTelemetry", "error", err)
 			} else {
@@ -86,7 +90,15 @@ func serveCmd() *cli.Command {
 			addr := fmt.Sprintf("%s:%d", cmd.GetString("server-host"), cmd.GetInt("server-port"))
 			log.Info("starting HTTP server", "addr", addr)
 			// go-scaffolder:serve-start
-			return http.ListenAndServe(addr, mux)
+			srv := &http.Server{
+				Addr:              addr,
+				Handler:           mux,
+				ReadHeaderTimeout: 10 * time.Second,
+				ReadTimeout:       30 * time.Second,
+				WriteTimeout:      30 * time.Second,
+				IdleTimeout:       120 * time.Second,
+			}
+			return srv.ListenAndServe()
 {{- else}}
 
 			log.Info("{{.AppName}} is running")

@@ -18,9 +18,9 @@ func FeaturePatches(feature string, cfg *config.ProjectConfig) []Patch {
 		return dbPatches(cfg)
 	case "cache":
 		return cachePatches(cfg)
-	case "docker":
-		return nil
-	case "nomad":
+	case "otel":
+		return otelPatches(cfg)
+	case "docker", "nomad", "ci":
 		return nil
 	}
 	return nil
@@ -34,6 +34,7 @@ func apiPatches(cfg *config.ProjectConfig) []Patch {
 			InsertAbove: true,
 			Content: fmt.Sprintf(`	"fmt"
 	"net/http"
+	"time"
 
 	"%s/cmd/routes"
 `, cfg.ModulePath),
@@ -67,7 +68,15 @@ func apiPatches(cfg *config.ProjectConfig) []Patch {
 				StartMarker: "// go-scaffolder:serve-start",
 				EndMarker:   "select {}",
 				Content: `// go-scaffolder:serve-start
-			return http.ListenAndServe(addr, mux)`,
+			srv := &http.Server{
+				Addr:              addr,
+				Handler:           mux,
+				ReadHeaderTimeout: 10 * time.Second,
+				ReadTimeout:       30 * time.Second,
+				WriteTimeout:      30 * time.Second,
+				IdleTimeout:       120 * time.Second,
+			}
+			return srv.ListenAndServe()`,
 			},
 		},
 		{
@@ -109,6 +118,35 @@ func mcpPatches(cfg *config.ProjectConfig) []Patch {
 			Content: `
 			mcpserver.StartMCPServer(log)`,
 			Description: "Add MCP server startup",
+		},
+	}
+}
+
+func otelPatches(cfg *config.ProjectConfig) []Patch {
+	return []Patch{
+		{
+			File:        "cmd/serve.go",
+			Marker:      "// go-scaffolder:serve-imports",
+			InsertAbove: true,
+			Content:     fmt.Sprintf("\n\t\"%[1]s/build\"\n\t\"%[1]s/internal/otel\"", cfg.ModulePath),
+			Description: "Add OpenTelemetry imports",
+		},
+		{
+			File:   "cmd/serve.go",
+			Marker: "// go-scaffolder:serve-init",
+			Content: fmt.Sprintf(`
+			log.Info("initializing OpenTelemetry")
+			shutdownOtel, err := otel.InitProvider(ctx, %q, build.Version)
+			if err != nil {
+				log.Error("failed to initialize OpenTelemetry", "error", err)
+			} else {
+				defer func() {
+					if err := shutdownOtel(context.Background()); err != nil {
+						log.Error("failed to shutdown OpenTelemetry", "error", err)
+					}
+				}()
+			}`, cfg.AppName),
+			Description: "Add OpenTelemetry initialization",
 		},
 	}
 }

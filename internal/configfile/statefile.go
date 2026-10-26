@@ -21,26 +21,10 @@ func WriteStateFile(path string, cfg *config.ProjectConfig) error {
 		CacheType:  string(cfg.CacheType),
 	}
 
-	if cfg.Features.API {
-		sc.Features = append(sc.Features, "api")
-	}
-	if cfg.Features.MCP {
-		sc.Features = append(sc.Features, "mcp")
-	}
-	if cfg.Features.UI {
-		sc.Features = append(sc.Features, "ui")
-	}
-	if cfg.Features.DB {
-		sc.Features = append(sc.Features, "db")
-	}
-	if cfg.Features.Cache {
-		sc.Features = append(sc.Features, "cache")
-	}
-	if cfg.Features.Docker {
-		sc.Features = append(sc.Features, "docker")
-	}
-	if cfg.Features.Nomad {
-		sc.Features = append(sc.Features, "nomad")
+	for _, name := range config.SelectableFeatures {
+		if cfg.Features.HasFeature(name) {
+			sc.Features = append(sc.Features, name)
+		}
 	}
 	sc.Features = append(sc.Features, cfg.CustomTags...)
 

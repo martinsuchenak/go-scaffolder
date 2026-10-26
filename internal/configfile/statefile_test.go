@@ -86,6 +86,8 @@ func TestWriteStateFileAllFeatures(t *testing.T) {
 			Cache:  true,
 			Docker: true,
 			Nomad:  true,
+			CI:     true,
+			Otel:   true,
 		},
 		DBType:    config.DBMySQL,
 		UseXDAL:   true,
@@ -102,10 +104,18 @@ func TestWriteStateFileAllFeatures(t *testing.T) {
 	}
 
 	content := string(data)
-	for _, feature := range []string{"api", "mcp", "ui", "db", "cache", "docker", "nomad"} {
+	for _, feature := range config.SelectableFeatures {
 		if !strings.Contains(content, feature) {
 			t.Errorf("state file should contain feature %q", feature)
 		}
+	}
+
+	loaded, err := LoadStateFile(path)
+	if err != nil {
+		t.Fatalf("LoadStateFile error: %v", err)
+	}
+	if loaded.Features != cfg.Features {
+		t.Errorf("features did not round-trip: got %+v, want %+v", loaded.Features, cfg.Features)
 	}
 }
 

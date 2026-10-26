@@ -158,8 +158,33 @@ func TestResolveProjectDir_WithinRootAllowed(t *testing.T) {
 	if err != nil {
 		t.Fatalf("resolveProjectDir error: %v", err)
 	}
-	if got != sub {
-		t.Errorf("resolveProjectDir = %q, want %q", got, sub)
+	want, err := filepath.EvalSymlinks(sub)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != want {
+		t.Errorf("resolveProjectDir = %q, want %q", got, want)
+	}
+}
+
+func TestResolveProjectDir_SymlinkEscapeRejected(t *testing.T) {
+	root := t.TempDir()
+	outside := t.TempDir()
+	if err := os.Symlink(outside, filepath.Join(root, "link")); err != nil {
+		t.Skipf("symlinks unsupported: %v", err)
+	}
+
+	if _, err := resolveProjectDir(root, "link"); err == nil {
+		t.Fatal("expected error for project_dir symlinked outside the server root")
+	}
+}
+
+func TestResolveConfig_FallbackInvalidAppName(t *testing.T) {
+	req := mcp.NewToolRequest(map[string]interface{}{
+		"app_name": "../evil",
+	})
+	if _, _, err := resolveConfig(req, t.TempDir()); err == nil {
+		t.Fatal("expected error for invalid fallback app_name")
 	}
 }
 
@@ -300,7 +325,7 @@ func TestGenerateContext_AllFeatures(t *testing.T) {
 		OutputDir:  "./full",
 		Features: config.FeatureSet{
 			CLI: true, API: true, MCP: true, UI: true,
-			DB: true, Cache: true, Docker: true, Nomad: true,
+			DB: true, Cache: true, Docker: true, Nomad: true, CI: true, Otel: true,
 		},
 		DBType:    config.DBPostgreSQL,
 		UseXDAL:   true,

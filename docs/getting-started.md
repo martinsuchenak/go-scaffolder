@@ -90,7 +90,7 @@ Feature flags:
     --cache-type <type>  Cache type: redis, valkey
 
 Serve flags:
-    --listen <addr>      Listen address (default: :8080)
+    --listen <addr>      Listen address (default: 127.0.0.1:8080)
     --token <token>      Bearer token for authorization (optional, env: MCP_TOKEN)
 ```
 

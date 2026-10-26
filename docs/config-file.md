@@ -59,7 +59,8 @@ Any feature name not in the list above is treated as a **custom tag** and can be
 
 The same validation rules apply in both interactive and config file modes:
 
-- `app_name` must not be empty or whitespace-only
+- `app_name` must not be empty and may contain only letters, digits, `.`, `_` and `-` (starting with a letter or digit)
+- `module_path` must be a valid Go import path (defaults to `app_name`)
 - `output_dir` must not be empty
 - `db_type` must be valid when DB is selected
 - `use_xdal` may only be set when DB is selected

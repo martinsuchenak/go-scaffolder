@@ -7,8 +7,11 @@ The server uses the [github.com/paularlott/mcp](https://github.com/paularlott/mc
 ## Starting the Server
 
 ```sh
-# Default (listen on :8080, no auth)
+# Default (listen on 127.0.0.1:8080, no auth)
 go-scaffolder serve
+
+# Listen on all interfaces -- always pair with --token
+go-scaffolder serve --listen :8080 --token my-secret-token
 
 # Custom listen address
 go-scaffolder serve --listen :9090
@@ -24,8 +27,9 @@ MCP_TOKEN=my-secret-token go-scaffolder serve
 
 | Flag | Env Var | Default | Description |
 |------|---------|---------|-------------|
-| `--listen` | -- | `:8080` | Address to listen on |
+| `--listen` | -- | `127.0.0.1:8080` | Address to listen on (loopback only by default) |
 | `--token` | `MCP_TOKEN` | -- | Bearer token for authorization (optional) |
+| `--root` | -- | `.` | Directory `project_dir` requests are confined to (symlinks are resolved before the check) |
 
 ## Authorization
 

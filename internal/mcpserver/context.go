@@ -30,6 +30,8 @@ func GenerateContext(cfg *config.ProjectConfig, projectDir string) string {
 		{"Cache", cfg.Features.Cache},
 		{"Docker", cfg.Features.Docker},
 		{"Nomad", cfg.Features.Nomad},
+		{"CI", cfg.Features.CI},
+		{"Otel", cfg.Features.Otel},
 	}
 
 	for _, f := range features {
@@ -58,22 +60,10 @@ func GenerateContext(cfg *config.ProjectConfig, projectDir string) string {
 	}
 
 	sb.WriteString("\n## Available Features to Enable\n\n")
-	enableable := []struct {
-		Name    string
-		Enabled bool
-	}{
-		{"api", cfg.Features.API},
-		{"mcp", cfg.Features.MCP},
-		{"ui", cfg.Features.UI},
-		{"db", cfg.Features.DB},
-		{"cache", cfg.Features.Cache},
-		{"docker", cfg.Features.Docker},
-		{"nomad", cfg.Features.Nomad},
-	}
 	anyAvailable := false
-	for _, f := range enableable {
-		if !f.Enabled {
-			fmt.Fprintf(&sb, "- `%s`\n", f.Name)
+	for _, name := range config.SelectableFeatures {
+		if !cfg.Features.HasFeature(name) {
+			fmt.Fprintf(&sb, "- `%s`\n", name)
 			anyAvailable = true
 		}
 	}

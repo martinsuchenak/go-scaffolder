@@ -71,7 +71,7 @@ The override is matched by the `output` path. All other built-in templates remai
 
 ## Custom Feature Tags
 
-External templates can use any string as a feature guard. Feature names that don't match a built-in feature (api, mcp, ui, db, cache, docker, nomad) are treated as **custom tags**.
+External templates can use any string as a feature guard. Feature names that don't match a built-in feature (api, mcp, ui, db, cache, docker, nomad, ci, otel) are treated as **custom tags**.
 
 Custom tags are activated by listing them in the config file's `features` array:
 

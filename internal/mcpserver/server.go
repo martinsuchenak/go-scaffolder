@@ -43,7 +43,7 @@ func NewServer(version string, rootDir string) *mcp.Server {
 		mcp.NewTool("scaffold", "Scaffold a new Go microservice project. Returns unified diff of all files.",
 			mcp.String("app_name", "Application name", mcp.Required()),
 			mcp.String("module_path", "Go module path (defaults to app_name)"),
-			mcp.String("features", "Comma-separated features: api,mcp,ui,db,cache,docker,nomad or all"),
+			mcp.String("features", "Comma-separated features: "+strings.Join(config.SelectableFeatures, ",")+" or all"),
 			mcp.String("db_type", "Database type: mysql, postgresql, sqlite"),
 			mcp.String("use_xdal", "Whether to use xdal for DB abstraction when db is enabled: true or false"),
 			mcp.String("cache_type", "Cache type: redis, valkey"),
@@ -82,7 +82,7 @@ func NewServer(version string, rootDir string) *mcp.Server {
 	)
 
 	enableParams := append([]mcp.Parameter{
-		mcp.String("feature", "Feature to enable: api, mcp, ui, db, cache, docker, nomad", mcp.Required()),
+		mcp.String("feature", "Feature to enable: "+strings.Join(config.SelectableFeatures, ", "), mcp.Required()),
 		mcp.String("db_type", "Database type: mysql, postgresql, sqlite (required when enabling db)"),
 		mcp.String("use_xdal", "Whether to use xdal for DB abstraction when enabling db: true or false"),
 		mcp.String("cache_type", "Cache type: redis, valkey (required when enabling cache)"),
@@ -106,11 +106,15 @@ func NewServer(version string, rootDir string) *mcp.Server {
 
 // resolveProjectDir resolves rawDir against rootDir and rejects any result
 // that escapes rootDir, so a caller-supplied project_dir can never point the
-// server at an arbitrary filesystem path.
+// server at an arbitrary filesystem path. Symlinks are resolved before the
+// check so a link inside rootDir cannot point outside it.
 func resolveProjectDir(rootDir, rawDir string) (string, error) {
 	absRoot, err := filepath.Abs(rootDir)
 	if err != nil {
 		return "", fmt.Errorf("resolving root directory: %w", err)
+	}
+	if realRoot, evalErr := filepath.EvalSymlinks(absRoot); evalErr == nil {
+		absRoot = realRoot
 	}
 	if rawDir == "" {
 		return absRoot, nil
@@ -123,6 +127,9 @@ func resolveProjectDir(rootDir, rawDir string) (string, error) {
 	absDir, err := filepath.Abs(candidate)
 	if err != nil {
 		return "", fmt.Errorf("resolving project_dir: %w", err)
+	}
+	if realDir, evalErr := filepath.EvalSymlinks(absDir); evalErr == nil {
+		absDir = realDir
 	}
 
 	rel, err := filepath.Rel(absRoot, absDir)
@@ -184,6 +191,9 @@ func resolveConfig(req *mcp.ToolRequest, rootDir string) (*config.ProjectConfig,
 		OutputDir:  ".",
 		ModulePath: modulePath,
 		Features:   config.FeatureSet{CLI: true},
+	}
+	if err := fallback.Validate(); err != nil {
+		return nil, "", fmt.Errorf("validation error: %w", err)
 	}
 	return fallback, "", nil
 }
@@ -313,6 +323,9 @@ func handleEnableFeature(ctx context.Context, req *mcp.ToolRequest, rootDir stri
 		return nil, fmt.Errorf("unknown feature: %s", feature)
 	}
 	config.ResolveFeatures(&cfg.Features)
+	if err := cfg.Validate(); err != nil {
+		return nil, fmt.Errorf("validation error: %w", err)
+	}
 
 	// featuresToRender includes the requested feature plus any it cascaded
 	// on (e.g. ui -> api), so their files/patches are applied together.

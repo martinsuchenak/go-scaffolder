@@ -4,7 +4,7 @@ Welcome to your newly scaffolded `{{.AppName}}` project! Here are the next steps
 
 {{- if .Features.API}}
 ## API & Authentication
-- [ ] **Authentication**: The boilerplate provides middleware placeholders in `internal/auth/auth.go`. You need to implement the actual validation logic (e.g., JWT validation, OAuth 2.0 + PKCE, or OIDC) for the `BearerTokenMiddleware`.
+- [ ] **Authentication**: The boilerplate provides middleware placeholders in `internal/auth/auth.go`. `BearerTokenMiddleware` rejects every request until you pass it a `TokenValidator` implementing your auth scheme (e.g., JWT validation, OAuth 2.0 + PKCE, or OIDC).
 - [ ] **OpenAPI Spec**: Update `openapi.yaml` to match any new endpoints you add, or consider generating it automatically from code comments using tools like `swag`.
 {{- end}}
 

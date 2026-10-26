@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 
 	"github.com/martinsuchenak/go-scaffolder/internal/config"
@@ -395,6 +396,36 @@ func TestIntegration_EnableMCP(t *testing.T) {
 
 	cfg.Features.MCP = true
 	enableFeature(t, dir, "mcp", cfg)
+
+	runInDir(t, dir, "go", "mod", "tidy")
+	runInDir(t, dir, "go", "build", "./...")
+	runInDir(t, dir, "go", "vet", "./...")
+	runInDir(t, dir, "go", "test", "./...")
+}
+
+func TestIntegration_EnableOtel(t *testing.T) {
+	cfg := &config.ProjectConfig{
+		AppName:    "test-enable-otel",
+		OutputDir:  "/tmp/test-enable-otel",
+		ModulePath: "test-enable-otel",
+		Features:   config.FeatureSet{API: true},
+	}
+
+	dir := scaffoldProject(t, cfg)
+	if err := configfile.WriteStateFile(filepath.Join(dir, configfile.StateFileName), cfg); err != nil {
+		t.Fatalf("WriteStateFile error: %v", err)
+	}
+
+	cfg.Features.Otel = true
+	enableFeature(t, dir, "otel", cfg)
+
+	serve, err := os.ReadFile(filepath.Join(dir, "cmd/serve.go"))
+	if err != nil {
+		t.Fatalf("reading serve.go: %v", err)
+	}
+	if !strings.Contains(string(serve), "otel.InitProvider(") {
+		t.Error("serve.go should initialize OpenTelemetry after enabling otel")
+	}
 
 	runInDir(t, dir, "go", "mod", "tidy")
 	runInDir(t, dir, "go", "build", "./...")

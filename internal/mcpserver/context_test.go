@@ -67,7 +67,7 @@ func TestGenerateContext_AllFeaturesEnabled(t *testing.T) {
 		ModulePath: "github.com/test/test-app",
 		Features: config.FeatureSet{
 			CLI: true, API: true, MCP: true, UI: true,
-			DB: true, Cache: true, Docker: true, Nomad: true,
+			DB: true, Cache: true, Docker: true, Nomad: true, CI: true, Otel: true,
 		},
 		DBType:    config.DBPostgreSQL,
 		UseXDAL:   true,

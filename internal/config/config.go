@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 )
 
@@ -146,11 +147,42 @@ func ExpandFeatureNames(names []string) []string {
 	return expanded
 }
 
+// appNamePattern restricts app names to characters that are safe in file
+// names, Go string literals, Docker image tags and Nomad job names.
+var appNamePattern = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]*$`)
+
+// modulePathPattern restricts module paths to characters valid in Go import
+// paths, so they can be embedded in generated import statements.
+var modulePathPattern = regexp.MustCompile(`^[A-Za-z0-9._~/-]+$`)
+
+// ValidateAppName reports whether name is usable as an app name.
+func ValidateAppName(name string) error {
+	if strings.TrimSpace(name) == "" {
+		return fmt.Errorf("app_name must not be empty")
+	}
+	if !appNamePattern.MatchString(name) {
+		return fmt.Errorf("invalid app_name %q: must start with a letter or digit and contain only letters, digits, '.', '_' or '-'", name)
+	}
+	return nil
+}
+
+// ValidateModulePath reports whether path is usable as a Go module path.
+func ValidateModulePath(path string) error {
+	if !modulePathPattern.MatchString(path) || strings.HasPrefix(path, "/") || strings.Contains(path, "..") {
+		return fmt.Errorf("invalid module_path %q: must be a Go import path such as github.com/org/app", path)
+	}
+	return nil
+}
+
 func (pc *ProjectConfig) Validate() error {
 	var errs []string
 
-	if strings.TrimSpace(pc.AppName) == "" {
-		errs = append(errs, "app_name must not be empty")
+	if err := ValidateAppName(pc.AppName); err != nil {
+		errs = append(errs, err.Error())
+	}
+
+	if err := ValidateModulePath(pc.ModulePath); err != nil {
+		errs = append(errs, err.Error())
 	}
 
 	if strings.TrimSpace(pc.OutputDir) == "" {
